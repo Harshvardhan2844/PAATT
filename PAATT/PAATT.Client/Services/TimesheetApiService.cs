@@ -7,6 +7,8 @@ public sealed class TimesheetApiService(HttpClient client) : ApiClientBase(clien
     public Task<TimesheetDto> CreateAsync(CreateTimesheetDto request) => SendAsync<TimesheetDto>(HttpMethod.Post, "api/timesheets", request);
     public Task<TimesheetDetailsDto> AddEntryAsync(int id, CreateTimesheetEntryDto request) => SendAsync<TimesheetDetailsDto>(HttpMethod.Post, $"api/timesheets/{id}/entries", request);
     public Task SubmitAsync(int id) => SendAsync(HttpMethod.Post, $"api/timesheets/{id}/submit");
+    public Task<TimesheetDetailsDto> UpdateEntryAsync(int id, UpdateTimesheetEntryDto request) => SendAsync<TimesheetDetailsDto>(HttpMethod.Put, $"api/timesheet-entries/{id}", request);
+    public Task DeleteEntryAsync(int id) => SendAsync(HttpMethod.Delete, $"api/timesheet-entries/{id}");
     public Task ApproveAsync(int id) => SendAsync(HttpMethod.Post, $"api/timesheets/{id}/approve");
     public Task RejectAsync(int id, RejectTimesheetDto request) => SendAsync(HttpMethod.Post, $"api/timesheets/{id}/reject", request);
     public Task RejectEntryAsync(int id, RejectTimesheetEntryDto request) => SendAsync(HttpMethod.Post, $"api/timesheet-entries/{id}/reject", request);
