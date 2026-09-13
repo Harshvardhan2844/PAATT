@@ -1,0 +1,35 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Build output
+bin/
+obj/
+
+# Visual Studio cache
+.vscode/
+
+# User-specific files
+*.user
+*.rsuser
+*.suo
+
+# NuGet
+packages/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Publish output
+publish/
+
+# Test results
+TestResults/
+
+# Local configuration / secrets
+appsettings.Development.json
