@@ -1,0 +1,11 @@
+@page "/admin/clients"
+@rendermode InteractiveAuto
+@inject ClientApiService ClientsApi
+
+<PageTitle>Clients</PageTitle>
+<h1>Clients</h1>
+<EditForm Model="form" OnValidSubmit="CreateAsync" class="card card-body mb-4"><DataAnnotationsValidator /><ValidationSummary /><div class="row g-2"><div class="col-md-4"><InputText class="form-control" @bind-Value="form.Name" placeholder="Client name" /></div><div class="col-md-3"><InputText class="form-control" @bind-Value="form.ContactName" placeholder="Contact name" /></div><div class="col-md-3"><InputText class="form-control" @bind-Value="form.ContactEmail" placeholder="Contact email" /></div><div class="col-md-2"><button class="btn btn-primary" type="submit">Add client</button></div></div></EditForm>
+@if (error is not null) { <div class="alert alert-danger">@error</div> }
+else if (items is null) { <p>Loading clients…</p> }
+else { <table class="table"><thead><tr><th>Client</th><th>Contact</th><th>Email</th><th>Status</th></tr></thead><tbody>@foreach (var item in items) { <tr><td>@item.Name</td><td>@item.ContactName</td><td>@item.ContactEmail</td><td>@(item.IsActive ? "Active" : "Inactive")</td></tr> }</tbody></table> }
+@code { private readonly CreateClientDto form = new(); private IReadOnlyList<ClientDto>? items; private string? error; protected override Task OnInitializedAsync() => LoadAsync(); private async Task LoadAsync() { try { error = null; items = await ClientsApi.GetAllAsync(); } catch (Exception exception) { error = exception.Message; } } private async Task CreateAsync() { try { await ClientsApi.CreateAsync(form); form.Name = form.ContactName = form.ContactEmail = string.Empty; await LoadAsync(); } catch (Exception exception) { error = exception.Message; } } }

@@ -1,0 +1,9 @@
+@page "/admin/employees"
+@rendermode InteractiveAuto
+@inject EmployeeApiService EmployeesApi
+
+<PageTitle>Employees</PageTitle>
+<h1>Employees</h1>
+<EditForm Model="form" OnValidSubmit="CreateAsync" class="card card-body mb-4"><DataAnnotationsValidator /><ValidationSummary /><div class="row g-2"><div class="col-md"><InputText class="form-control" @bind-Value="form.Name" placeholder="Name" /></div><div class="col-md"><InputText class="form-control" @bind-Value="form.Email" placeholder="Email" /></div><div class="col-md"><InputText class="form-control" type="password" @bind-Value="form.Password" placeholder="Password" /></div><div class="col-auto"><button class="btn btn-primary">Add employee</button></div></div></EditForm>
+@if (error is not null) { <div class="alert alert-danger">@error</div> } else if (items is null) { <p>Loading employees…</p> } else { <table class="table"><thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Status</th></tr></thead><tbody>@foreach (var employee in items) { <tr><td>@employee.Name</td><td>@employee.Email</td><td>@string.Join(", ", employee.Roles)</td><td>@(employee.IsActive ? "Active" : "Inactive")</td></tr> }</tbody></table> }
+@code { private readonly CreateEmployeeDto form = new(); private IReadOnlyList<EmployeeDto>? items; private string? error; protected override Task OnInitializedAsync() => LoadAsync(); private async Task LoadAsync() { try { error = null; items = await EmployeesApi.GetAllAsync(); } catch (Exception exception) { error = exception.Message; } } private async Task CreateAsync() { try { await EmployeesApi.CreateAsync(form); form.Name = form.Email = form.Password = string.Empty; await LoadAsync(); } catch (Exception exception) { error = exception.Message; } } }

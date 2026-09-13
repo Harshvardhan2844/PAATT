@@ -1,0 +1,15 @@
+@page "/consultant/projects"
+@rendermode InteractiveAuto
+@inject ProjectApiService Projects
+
+<PageTitle>My Projects</PageTitle>
+<h1>My Projects</h1>
+@if (error is not null) { <div class="alert alert-danger">@error</div> }
+else if (items is null) { <p>Loading projects…</p> }
+else { <table class="table"><thead><tr><th>Project</th><th>Client</th><th>Manager</th><th>Budgeted hours</th></tr></thead><tbody>@foreach (var project in items) { <tr><td>@project.Name</td><td>@project.ClientName</td><td>@project.ProjectManagerName</td><td>@project.BudgetedHours</td></tr> }</tbody></table> }
+
+@code {
+    private IReadOnlyList<ProjectDto>? items;
+    private string? error;
+    protected override async Task OnInitializedAsync() { try { items = await Projects.GetMineAsync(); } catch (Exception exception) { error = exception.Message; } }
+}
