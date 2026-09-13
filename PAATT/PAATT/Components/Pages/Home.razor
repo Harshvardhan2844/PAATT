@@ -1,7 +1,22 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>PAATT Dashboard</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="mb-4">
+    <h1>PAATT Dashboard</h1>
+    <p class="lead text-muted">Project Allocation &amp; Timesheet Tracking</p>
+</div>
 
-Welcome to your new app.
+<div class="row g-4">
+    <div class="col-md-4">
+        <section class="card h-100 shadow-sm"><div class="card-body"><h2 class="h4">Administration</h2><p>Manage clients, employees, roles, and projects.</p><div class="d-grid gap-2"><a class="btn btn-outline-primary" href="admin/clients">Clients</a><a class="btn btn-outline-primary" href="admin/employees">Employees</a><a class="btn btn-outline-primary" href="admin/projects">Projects</a></div></div></section>
+    </div>
+    <div class="col-md-4">
+        <section class="card h-100 shadow-sm"><div class="card-body"><h2 class="h4">Project Manager</h2><p>Review submitted timesheets and leave approval or rejection feedback.</p><a class="btn btn-outline-primary w-100" href="manager/timesheets">Review timesheets</a></div></section>
+    </div>
+    <div class="col-md-4">
+        <section class="card h-100 shadow-sm"><div class="card-body"><h2 class="h4">Consultant</h2><p>See assigned projects, create timesheets, and submit daily work.</p><div class="d-grid gap-2"><a class="btn btn-outline-primary" href="consultant/projects">My Projects</a><a class="btn btn-primary" href="consultant/timesheets/create">Create Timesheet</a></div></div></section>
+    </div>
+</div>
+
+<div class="alert alert-info mt-4 mb-0">Your permissions determine which API actions are allowed. The development account has all three roles, so it can explore every section.</div>

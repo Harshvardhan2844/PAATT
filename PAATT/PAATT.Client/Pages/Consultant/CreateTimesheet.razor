@@ -22,8 +22,8 @@ else
 }
 
 @code {
-    private readonly CreateTimesheetDto createForm = new() { WeekStartDate = GetMonday(DateOnly.FromDateTime(DateTime.UtcNow)) };
-    private readonly CreateTimesheetEntryDto entryForm = new() { WorkDate = DateOnly.FromDateTime(DateTime.UtcNow) };
+    private readonly CreateTimesheetDto createForm = new() { WeekStartDate = GetMonday(AppClock.Today) };
+    private readonly CreateTimesheetEntryDto entryForm = new() { WorkDate = AppClock.Today };
     private IReadOnlyList<ProjectDto> projects = [];
     private TimesheetDetailsDto? sheet;
     private string? error;

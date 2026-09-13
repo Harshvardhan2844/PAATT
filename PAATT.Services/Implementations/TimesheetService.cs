@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PAATT.Data;
 using PAATT.Data.Entities;
+using PAATT.Shared;
 using PAATT.Services.Interfaces;
 using PAATT.Shared.DTOs;
 using PAATT.Shared.Enums;
@@ -132,7 +133,7 @@ public sealed class TimesheetService(ApplicationDbContext database) : ITimesheet
     private static System.Linq.Expressions.Expression<Func<Timesheet, TimesheetDto>> Summary() => sheet => new TimesheetDto(sheet.Id, sheet.ProjectId, sheet.Project.Name, sheet.ConsultantId, sheet.Consultant.Name, sheet.WeekStartDate, sheet.Status, sheet.Entries.Sum(entry => entry.Hours));
     private static TimesheetDetailsDto ToDetails(Timesheet sheet) => new(sheet.Id, sheet.ProjectId, sheet.Project.Name, sheet.ConsultantId, sheet.Consultant.Name, sheet.WeekStartDate, sheet.Status, sheet.Entries.Sum(entry => entry.Hours), sheet.Entries.OrderBy(entry => entry.WorkDate).Select(entry => new TimesheetEntryDto(entry.Id, entry.WorkDate, entry.Hours, entry.Description, entry.Status, entry.Feedback)).ToList(), sheet.Reviews.OrderByDescending(review => review.CreatedUtc).Select(review => new TimesheetReviewDto(review.Id, review.TimesheetEntryId, review.Reviewer.Name, review.Action, review.Feedback, review.CreatedUtc)).ToList());
     private static DateOnly GetWeekStart(DateOnly date) => date.AddDays(-((7 + ((int)date.DayOfWeek - (int)DayOfWeek.Monday)) % 7));
-    private static void ValidateEntryDate(Timesheet sheet, DateOnly workDate) { if (workDate != DateOnly.FromDateTime(DateTime.UtcNow) || GetWeekStart(workDate) != sheet.WeekStartDate) throw new ApplicationValidationException("Timesheet entries can only be created or changed for the current date."); }
+    private static void ValidateEntryDate(Timesheet sheet, DateOnly workDate) { if (workDate != AppClock.Today || GetWeekStart(workDate) != sheet.WeekStartDate) throw new ApplicationValidationException("Timesheet entries can only be created or changed for the current date."); }
     private async Task EnsureDailyHoursAsync(string consultantId, DateOnly date, decimal requestedHours, int? excludedEntryId, CancellationToken token) { var total = await database.TimesheetEntries.Where(entry => entry.Timesheet.ConsultantId == consultantId && entry.WorkDate == date && (!excludedEntryId.HasValue || entry.Id != excludedEntryId.Value)).SumAsync(entry => (decimal?)entry.Hours, token) ?? 0; if (total + requestedHours > 24) throw new ApplicationValidationException("Daily logged hours cannot exceed 24 hours."); }
     private static void EnsureEntryCanBeChanged(Timesheet sheet, TimesheetEntry? entry) { if (sheet.Status == TimesheetStatus.Draft) return; if (sheet.Status == TimesheetStatus.Rejected) return; if (entry?.Status == TimesheetEntryStatus.Rejected) return; throw new ApplicationValidationException("Only draft or rejected timesheet entries can be changed."); }
     private static void EnsurePending(Timesheet sheet) { if (sheet.Status != TimesheetStatus.Pending) throw new ApplicationValidationException("Only pending timesheets can be reviewed."); }
