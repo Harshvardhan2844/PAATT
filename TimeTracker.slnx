@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="App.Data/App.Data.csproj" />
+  <Project Path="App.Service/App.Service.csproj" />
+  <Project Path="App.Shared/App.Shared.csproj" />
+  <Project Path="App.Web/App.Web.csproj" />
+  <Project Path="App.WebClient/App.WebClient.csproj" />
+</Solution>

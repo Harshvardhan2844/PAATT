@@ -1,0 +1,148 @@
+@page "/consultant/timesheets"
+@attribute [Authorize(Roles = "Consultant")]
+@rendermode InteractiveAuto
+@inject IConsultantApi Api
+
+<PageTitle>My timesheets</PageTitle>
+
+<ConsultantAttentionBanner />
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+    <h1 class="h3 mb-0">My timesheets</h1>
+    <a class="btn btn-outline-secondary btn-sm" href="/consultant/projects">My projects</a>
+</div>
+
+<p class="text-muted">
+    One timesheet per project, per week. A rejected week reopens for editing — fix what the manager
+    flagged and send it back.
+</p>
+
+<ul class="nav nav-pills mb-3 gap-1">
+    @foreach (var option in FilterOptions)
+    {
+        <li class="nav-item">
+            <button type="button" class="nav-link @FilterClass(option)" @onclick="() => _filter = option">
+                @FilterLabel(option)
+                <span class="badge text-bg-light text-dark ms-1">@CountFor(option)</span>
+            </button>
+        </li>
+    }
+</ul>
+
+@if (_loading)
+{
+    <p class="text-muted">Loading…</p>
+}
+else if (Filtered.Count == 0)
+{
+    <p class="text-muted">@EmptyMessage</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Week</th>
+                    <th scope="col">Project</th>
+                    <th scope="col" class="text-end">Hours</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var timesheet in Filtered)
+                {
+                    <tr>
+                        <td class="text-nowrap">@WeekLabel(timesheet.WeekStartingDate)</td>
+                        <td>@timesheet.ProjectName</td>
+                        <td class="text-end">@HoursLabel(timesheet.TotalHours)</td>
+                        <td>
+                            <span class="badge @StatusClass(timesheet.Status)">@timesheet.Status</span>
+                            @if (timesheet.Status == TimesheetStatus.Rejected && !string.IsNullOrWhiteSpace(timesheet.OverallManagerFeedback))
+                            {
+                                <div class="small text-danger mt-1">@timesheet.OverallManagerFeedback</div>
+                            }
+                            @if (RejectedEntryCount(timesheet) > 0 && timesheet.Status != TimesheetStatus.Rejected)
+                            {
+                                <div class="small text-danger mt-1">@RejectedEntryLabel(timesheet)</div>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" href="@OpenUrl(timesheet)">Open week</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    // null = "All"; the rest map to a TimesheetStatus.
+    private static readonly TimesheetStatus?[] FilterOptions =
+    {
+        null,
+        TimesheetStatus.Draft,
+        TimesheetStatus.Submitted,
+        TimesheetStatus.Approved,
+        TimesheetStatus.Rejected
+    };
+
+    private List<TimesheetDto> _timesheets = new();
+    private TimesheetStatus? _filter;
+    private bool _loading = true;
+
+    /// <summary>Set by ?projectId=N, e.g. from the "Past weeks" link on My projects.</summary>
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int? ProjectId { get; set; }
+
+    private List<TimesheetDto> Filtered =>
+        _filter is null ? _timesheets : _timesheets.Where(t => t.Status == _filter).ToList();
+
+    private string EmptyMessage => _timesheets.Count == 0
+        ? "You haven't logged any time yet. Pick a project and start this week's timesheet."
+        : "No timesheets with that status.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _timesheets = await Api.GetMyTimesheetsAsync(ProjectId);
+        _loading = false;
+    }
+
+    private int CountFor(TimesheetStatus? option) =>
+        option is null ? _timesheets.Count : _timesheets.Count(t => t.Status == option);
+
+    private string FilterClass(TimesheetStatus? option) => _filter == option ? "active" : string.Empty;
+
+    private static string FilterLabel(TimesheetStatus? option) => option?.ToString() ?? "All";
+
+    private static string HoursLabel(decimal hours) => hours.ToString("0.##") + " h";
+
+    private static string WeekLabel(DateOnly weekStart) =>
+        weekStart.ToString("d MMM") + " – " + weekStart.AddDays(6).ToString("d MMM yyyy");
+
+    private static string StatusClass(TimesheetStatus status) => status switch
+    {
+        TimesheetStatus.Draft => "text-bg-secondary",
+        TimesheetStatus.Submitted => "text-bg-info",
+        TimesheetStatus.Approved => "text-bg-success",
+        TimesheetStatus.Rejected => "text-bg-danger",
+        _ => "text-bg-light text-dark"
+    };
+
+    private static int RejectedEntryCount(TimesheetDto timesheet) =>
+        timesheet.Entries.Count(e => e.Status == EntryStatus.Rejected);
+
+    private static string RejectedEntryLabel(TimesheetDto timesheet)
+    {
+        var count = RejectedEntryCount(timesheet);
+        return count == 1
+            ? "1 entry needs your attention"
+            : count + " entries need your attention";
+    }
+
+    private static string OpenUrl(TimesheetDto timesheet) =>
+        "/consultant/timesheet/" + timesheet.ProjectId + "/" + TimeRules.ToRouteValue(timesheet.WeekStartingDate);
+}

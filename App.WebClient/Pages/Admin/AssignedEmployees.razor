@@ -1,0 +1,101 @@
+@page "/admin/assigned-employees"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveAuto
+@inject IAdminApi Api
+
+<PageTitle>Assigned employees</PageTitle>
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+    <h1 class="h3 mb-0">Assigned employees</h1>
+    <a class="btn btn-outline-secondary btn-sm" href="/admin/employees">Manage employees</a>
+</div>
+
+<p class="text-muted">
+    These two lists are derived from project assignments, not from anyone's account settings.
+    The same person can appear in both — Manager on one project, Consultant on another — but never
+    twice for the same project. Anyone with no assignments at all doesn't show up here;
+    they're on the <a href="/admin/employees">Employees</a> screen.
+</p>
+
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <button type="button" class="nav-link @TabClass(Tab.Managers)" @onclick="() => _tab = Tab.Managers">
+            Managers
+            <span class="badge text-bg-secondary ms-1">@_managers.Count</span>
+        </button>
+    </li>
+    <li class="nav-item">
+        <button type="button" class="nav-link @TabClass(Tab.Consultants)" @onclick="() => _tab = Tab.Consultants">
+            Consultants
+            <span class="badge text-bg-secondary ms-1">@_consultants.Count</span>
+        </button>
+    </li>
+</ul>
+
+@if (_loading)
+{
+    <p class="text-muted">Loading…</p>
+}
+else if (Current.Count == 0)
+{
+    <p class="text-muted">@EmptyMessage</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">@ProjectColumnHeading</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var employee in Current)
+                {
+                    <tr>
+                        <td>@employee.Name</td>
+                        <td class="text-break">@employee.Email</td>
+                        <td>
+                            @foreach (var projectName in ProjectsFor(employee))
+                            {
+                                <span class="badge text-bg-light text-dark border me-1">@projectName</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private enum Tab { Managers, Consultants }
+
+    private List<EmployeeDto> _managers = new();
+    private List<EmployeeDto> _consultants = new();
+    private Tab _tab = Tab.Managers;
+    private bool _loading = true;
+
+    // Both lists arrive sorted by name from the service layer.
+    private List<EmployeeDto> Current => _tab == Tab.Managers ? _managers : _consultants;
+
+    private string ProjectColumnHeading => _tab == Tab.Managers ? "Manages" : "Works on";
+
+    private string EmptyMessage => _tab == Tab.Managers
+        ? "Nobody is managing a project yet. Assign a manager on the Project Assignments screen."
+        : "Nobody is assigned as a consultant yet. Add consultants on the Project Assignments screen.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _managers = await Api.GetManagersAsync();
+        _consultants = await Api.GetConsultantsAsync();
+        _loading = false;
+    }
+
+    private string TabClass(Tab tab) => _tab == tab ? "active" : string.Empty;
+
+    private List<string> ProjectsFor(EmployeeDto employee) =>
+        _tab == Tab.Managers ? employee.ManagedProjectNames : employee.ConsultantProjectNames;
+}

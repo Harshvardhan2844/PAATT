@@ -1,0 +1,188 @@
+@page "/manager/project/{ProjectId:int}"
+@attribute [Authorize(Roles = "Consultant")]
+@rendermode InteractiveAuto
+@inject IManagerApi Api
+
+<PageTitle>Project</PageTitle>
+
+<ManagerAttentionBanner />
+
+@if (_loading)
+{
+    <p class="text-muted">Loading…</p>
+}
+else if (_project is null)
+{
+    <div class="alert alert-warning py-2">
+        You don't manage this project, so there's nothing here for you.
+        <a href="/manager/projects" class="alert-link">Back to your projects</a>.
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+        <div>
+            <h1 class="h3 mb-1">@_project.Name</h1>
+            <div class="text-muted">@_project.ClientName</div>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="/manager/projects">All my projects</a>
+    </div>
+
+    <h2 class="h5 mt-4">Consultants</h2>
+    <p class="text-muted small">
+        Each person against their own budget. There's no combined project figure here on purpose —
+        budgets are set per consultant, so a shared total wouldn't mean anything.
+    </p>
+
+    @if (_budgets.Count == 0)
+    {
+        <p class="text-muted">No consultants assigned to this project yet.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Consultant</th>
+                        <th scope="col" class="text-end">Budget</th>
+                        <th scope="col" class="text-end">Logged</th>
+                        <th scope="col" class="text-end">Approved</th>
+                        <th scope="col" style="width: 12rem;">Against budget</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in _budgets)
+                    {
+                        <tr>
+                            <td>@row.ConsultantName</td>
+                            <td class="text-end">@BudgetLabel(row)</td>
+                            <td class="text-end">@HoursLabel(row.ActualHours)</td>
+                            <td class="text-end text-muted">@HoursLabel(row.ApprovedHours)</td>
+                            <td>
+                                @if (row.BudgetedHours is > 0)
+                                {
+                                    <div class="progress" role="progressbar" aria-label="Hours against budget"
+                                         aria-valuenow="@Percent(row)" aria-valuemin="0" aria-valuemax="100"
+                                         style="height: 0.5rem;">
+                                        <div class="progress-bar @BarClass(row)" style="@BarStyle(row)"></div>
+                                    </div>
+                                    <div class="small text-muted mt-1">@RemainingLabel(row)</div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">No budget set</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <h2 class="h5 mt-4">Timesheets on this project</h2>
+
+    @if (_timesheets.Count == 0)
+    {
+        <p class="text-muted">Nothing submitted yet.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Week</th>
+                        <th scope="col">Consultant</th>
+                        <th scope="col" class="text-end">Hours</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var timesheet in _timesheets)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@WeekLabel(timesheet.WeekStartingDate)</td>
+                            <td>@timesheet.EmployeeName</td>
+                            <td class="text-end">@HoursLabel(timesheet.TotalHours)</td>
+                            <td><span class="badge @StatusClass(timesheet.Status)">@timesheet.Status</span></td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-primary" href="@ReviewUrl(timesheet)">Review</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+}
+
+@code {
+    private ProjectDto? _project;
+    private List<BudgetVsActualDto> _budgets = new();
+    private List<TimesheetDto> _timesheets = new();
+    private bool _loading = true;
+
+    [Parameter] public int ProjectId { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+
+        _project = await Api.GetProjectAsync(ProjectId);
+
+        if (_project is not null)
+        {
+            _budgets = await Api.GetProjectBudgetsAsync(ProjectId);
+
+            var queue = await Api.GetQueueAsync();
+            _timesheets = queue.Where(t => t.ProjectId == ProjectId).ToList();
+        }
+
+        _loading = false;
+    }
+
+    private static string HoursLabel(decimal hours) => hours.ToString("0.##") + " h";
+
+    private static string BudgetLabel(BudgetVsActualDto row) =>
+        row.BudgetedHours is null ? "—" : HoursLabel(row.BudgetedHours.Value);
+
+    private static int Percent(BudgetVsActualDto row)
+    {
+        if (row.BudgetedHours is null or <= 0) return 0;
+        return (int)Math.Clamp(row.ActualHours / row.BudgetedHours.Value * 100m, 0m, 100m);
+    }
+
+    private static string BarStyle(BudgetVsActualDto row) => "width: " + Percent(row) + "%";
+
+    private static string BarClass(BudgetVsActualDto row)
+    {
+        if (row.BudgetedHours is > 0 && row.ActualHours > row.BudgetedHours.Value) return "bg-danger";
+        return Percent(row) >= 90 ? "bg-warning" : "bg-primary";
+    }
+
+    private static string RemainingLabel(BudgetVsActualDto row)
+    {
+        if (row.BudgetedHours is null or <= 0) return string.Empty;
+
+        var remaining = row.BudgetedHours.Value - row.ActualHours;
+        return remaining >= 0
+            ? HoursLabel(remaining) + " left"
+            : HoursLabel(Math.Abs(remaining)) + " over budget";
+    }
+
+    private static string WeekLabel(DateOnly weekStart) =>
+        weekStart.ToString("d MMM") + " – " + weekStart.AddDays(6).ToString("d MMM yyyy");
+
+    private static string StatusClass(TimesheetStatus status) => status switch
+    {
+        TimesheetStatus.Submitted => "text-bg-info",
+        TimesheetStatus.Approved => "text-bg-success",
+        TimesheetStatus.Rejected => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+
+    private static string ReviewUrl(TimesheetDto timesheet) => "/manager/timesheet/" + timesheet.Id;
+}

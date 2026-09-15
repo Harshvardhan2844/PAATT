@@ -1,0 +1,398 @@
+@page "/admin/assignments"
+@page "/admin/assignments/{ProjectId:int}"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveAuto
+@inject IAdminApi Api
+@inject NavigationManager Nav
+
+<PageTitle>Project assignments</PageTitle>
+
+<h1 class="h3 mb-2">Project assignments</h1>
+<p class="text-muted">
+    Pick one <strong>Manager</strong> and any number of <strong>Consultants</strong> for a project, here, in one place.
+    Each Consultant gets their own budgeted hours — there is no shared project total. Nobody can hold both roles
+    on the same project, so anyone already assigned is hidden from the pickers below until you remove their
+    current assignment.
+</p>
+
+<ResultAlert Message="@_message" Errors="@_errors" />
+
+<div class="mb-4" style="max-width: 30rem;">
+    <label class="form-label" for="project-picker">Project</label>
+    <select id="project-picker" class="form-select" value="@ProjectIdValue" @onchange="OnProjectChanged">
+        <option value="0">Select a project…</option>
+        @foreach (var project in _projects)
+        {
+            <option value="@project.Id">@project.Name (@project.ClientName)</option>
+        }
+    </select>
+</div>
+
+@if (ProjectId is null)
+{
+    <p class="text-muted">Choose a project above to manage who works on it.</p>
+}
+else if (_loading)
+{
+    <p class="text-muted">Loading assignments…</p>
+}
+else if (_project is null)
+{
+    <div class="alert alert-warning py-2">That project no longer exists. Pick another one.</div>
+}
+else
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Manager</span>
+            <span class="text-muted small">One per project</span>
+        </div>
+        <div class="card-body">
+            @if (Manager is { } manager)
+            {
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <span class="badge text-bg-primary me-2">Manager</span>
+                        <strong>@manager.EmployeeName</strong>
+                        <div class="text-muted small">Managers don't get budgeted hours — those belong to consultants.</div>
+                    </div>
+                    <ConfirmButton Text="Remove manager"
+                                   ConfirmText="Really remove?"
+                                   Disabled="@_busy"
+                                   OnConfirmed="() => RemoveAsync(manager)" />
+                </div>
+            }
+            else
+            {
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label" for="manager-pick">Assign a manager</label>
+                        <select id="manager-pick" class="form-select" @bind="_managerPick">
+                            <option value="">Select an employee…</option>
+                            @foreach (var employee in Available)
+                            {
+                                <option value="@employee.Id">@employee.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="AssignManagerAsync">
+                            Assign as manager
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Consultants</span>
+            <span class="text-muted small">Each with their own budget</span>
+        </div>
+        <div class="card-body">
+            <div class="row g-2 align-items-end mb-3">
+                <div class="col-md-5">
+                    <label class="form-label" for="consultant-pick">Add a consultant</label>
+                    <select id="consultant-pick" class="form-select" @bind="_consultantPick">
+                        <option value="">Select an employee…</option>
+                        @foreach (var employee in Available)
+                        {
+                            <option value="@employee.Id">@employee.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="consultant-hours">Budgeted hours</label>
+                    <input id="consultant-hours" type="number" step="0.25" min="0.25" class="form-control"
+                           @bind="_consultantHours" />
+                </div>
+                <div class="col-md-3">
+                    <button type="button" class="btn btn-primary" disabled="@_busy" @onclick="AddConsultantAsync">
+                        Add consultant
+                    </button>
+                </div>
+            </div>
+
+            @if (Consultants.Count == 0)
+            {
+                <p class="text-muted mb-0">No consultants on this project yet.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Consultant</th>
+                                <th scope="col" style="width: 12rem;">Budgeted hours</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var assignment in Consultants)
+                            {
+                                <tr>
+                                    <td>@assignment.EmployeeName</td>
+                                    <td>
+                                        <input type="number" step="0.25" min="0.25" class="form-control form-control-sm"
+                                               value="@DraftFor(assignment.Id)"
+                                               disabled="@_busy"
+                                               @onchange="args => SetDraft(assignment.Id, args.Value?.ToString())" />
+                                    </td>
+                                    <td class="text-end text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary me-1"
+                                                disabled="@_busy" @onclick="() => SaveBudgetAsync(assignment)">
+                                            Save hours
+                                        </button>
+                                        <ConfirmButton Text="Remove"
+                                                       ConfirmText="Really remove?"
+                                                       Disabled="@_busy"
+                                                       OnConfirmed="() => RemoveAsync(assignment)" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    // -1 is a sentinel that can't match a real id or null, so the first
+    // OnParametersSetAsync always loads.
+    private int? _loadedProjectId = -1;
+
+    private List<ProjectDto> _projects = new();
+    private List<EmployeeDto> _employees = new();
+    private List<ProjectAssignmentDto> _assignments = new();
+    private Dictionary<int, decimal?> _budgetDrafts = new();
+
+    private ProjectDto? _project;
+    private string _managerPick = string.Empty;
+    private string _consultantPick = string.Empty;
+    private decimal? _consultantHours;
+
+    private string? _message;
+    private List<string>? _errors;
+    private bool _loading;
+    private bool _busy;
+
+    [Parameter] public int? ProjectId { get; set; }
+
+    private int ProjectIdValue => ProjectId ?? 0;
+
+    private ProjectAssignmentDto? Manager =>
+        _assignments.FirstOrDefault(a => a.AssignmentType == AssignmentType.Manager);
+
+    private List<ProjectAssignmentDto> Consultants =>
+        _assignments.Where(a => a.AssignmentType == AssignmentType.Consultant)
+                    .OrderBy(a => a.EmployeeName)
+                    .ToList();
+
+    /// <summary>
+    /// Employees not yet assigned to this project in any capacity. Filtering
+    /// them out is how the "can't be Manager and Consultant on the same
+    /// project" rule shows up in the UI — the service enforces it too, this
+    /// just stops you from trying.
+    /// </summary>
+    private List<EmployeeDto> Available
+    {
+        get
+        {
+            var taken = _assignments.Select(a => a.EmployeeId).ToHashSet();
+            return _employees.Where(e => !taken.Contains(e.Id)).OrderBy(e => e.Name).ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _projects = await Api.GetProjectsAsync();
+        _employees = await Api.GetEmployeesAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedProjectId == ProjectId) return;
+
+        _loadedProjectId = ProjectId;
+        ClearFeedback();
+        ResetPickers();
+        await LoadProjectAsync();
+    }
+
+    private async Task LoadProjectAsync()
+    {
+        if (ProjectId is null)
+        {
+            _project = null;
+            _assignments = new List<ProjectAssignmentDto>();
+            _budgetDrafts = new Dictionary<int, decimal?>();
+            return;
+        }
+
+        _loading = true;
+
+        _project = await Api.GetProjectAsync(ProjectId.Value);
+        _assignments = _project is null
+            ? new List<ProjectAssignmentDto>()
+            : await Api.GetAssignmentsForProjectAsync(ProjectId.Value);
+
+        _budgetDrafts = _assignments
+            .Where(a => a.AssignmentType == AssignmentType.Consultant)
+            .ToDictionary(a => a.Id, a => a.BudgetedHours);
+
+        _loading = false;
+    }
+
+    private void OnProjectChanged(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString();
+        Nav.NavigateTo(string.IsNullOrEmpty(value) || value == "0"
+            ? "/admin/assignments"
+            : "/admin/assignments/" + value);
+    }
+
+    private async Task AssignManagerAsync()
+    {
+        if (ProjectId is null) return;
+
+        if (string.IsNullOrWhiteSpace(_managerPick))
+        {
+            ShowError("Select an employee to assign as manager.");
+            return;
+        }
+
+        await SendAsync(new AssignmentRequest
+        {
+            ProjectId = ProjectId.Value,
+            EmployeeId = _managerPick,
+            AssignmentType = AssignmentType.Manager,
+            BudgetedHours = null
+        }, "Manager assigned.");
+    }
+
+    private async Task AddConsultantAsync()
+    {
+        if (ProjectId is null) return;
+
+        if (string.IsNullOrWhiteSpace(_consultantPick))
+        {
+            ShowError("Select an employee to add as a consultant.");
+            return;
+        }
+
+        // Mirrors the service rule so the round trip isn't wasted; the service
+        // still has the final say.
+        if (_consultantHours is null || _consultantHours <= 0)
+        {
+            ShowError("Budgeted hours are required for a consultant, and must be greater than 0.");
+            return;
+        }
+
+        await SendAsync(new AssignmentRequest
+        {
+            ProjectId = ProjectId.Value,
+            EmployeeId = _consultantPick,
+            AssignmentType = AssignmentType.Consultant,
+            BudgetedHours = _consultantHours
+        }, "Consultant added.");
+    }
+
+    private async Task SaveBudgetAsync(ProjectAssignmentDto assignment)
+    {
+        if (ProjectId is null) return;
+
+        var draft = DraftFor(assignment.Id);
+        if (draft is null || draft <= 0)
+        {
+            ShowError("Budgeted hours must be greater than 0.");
+            return;
+        }
+
+        // AssignAsync updates the existing (project, employee) row in place.
+        await SendAsync(new AssignmentRequest
+        {
+            ProjectId = ProjectId.Value,
+            EmployeeId = assignment.EmployeeId,
+            AssignmentType = AssignmentType.Consultant,
+            BudgetedHours = draft
+        }, "Updated budgeted hours for " + assignment.EmployeeName + ".");
+    }
+
+    private async Task SendAsync(AssignmentRequest request, string successMessage)
+    {
+        _busy = true;
+        ClearFeedback();
+
+        var result = await Api.AssignAsync(request);
+        if (result.Success)
+        {
+            _message = successMessage;
+            ResetPickers();
+            await RefreshAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    private async Task RemoveAsync(ProjectAssignmentDto assignment)
+    {
+        _busy = true;
+        ClearFeedback();
+
+        // Note: this leaves any timesheets already logged under the assignment
+        // alone — history is kept, the person just can't log more time here.
+        var result = await Api.RemoveAssignmentAsync(assignment.Id);
+        if (result.Success)
+        {
+            _message = "Removed " + assignment.EmployeeName + " from this project.";
+            await RefreshAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    private async Task RefreshAsync()
+    {
+        // Reload the project list too, so the picker and the Projects screen
+        // agree about who manages what.
+        _projects = await Api.GetProjectsAsync();
+        await LoadProjectAsync();
+    }
+
+    private decimal? DraftFor(int assignmentId) =>
+        _budgetDrafts.TryGetValue(assignmentId, out var value) ? value : null;
+
+    private void SetDraft(int assignmentId, string? raw) =>
+        _budgetDrafts[assignmentId] = decimal.TryParse(raw, out var parsed) ? parsed : null;
+
+    private void ResetPickers()
+    {
+        _managerPick = string.Empty;
+        _consultantPick = string.Empty;
+        _consultantHours = null;
+    }
+
+    private void ShowError(string error)
+    {
+        _message = null;
+        _errors = new List<string> { error };
+    }
+
+    private void ClearFeedback()
+    {
+        _message = null;
+        _errors = null;
+    }
+}

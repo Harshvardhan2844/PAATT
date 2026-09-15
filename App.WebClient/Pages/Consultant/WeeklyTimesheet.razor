@@ -1,0 +1,539 @@
+@page "/consultant/timesheet/{ProjectId:int}"
+@page "/consultant/timesheet/{ProjectId:int}/{WeekStart}"
+@attribute [Authorize(Roles = "Consultant")]
+@rendermode InteractiveAuto
+@inject IConsultantApi Api
+@inject NavigationManager Nav
+
+<PageTitle>Weekly timesheet</PageTitle>
+
+<ConsultantAttentionBanner />
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+    <div>
+        <h1 class="h3 mb-1">@ProjectHeading</h1>
+        <div class="text-muted">@SubHeading</div>
+    </div>
+    <div class="btn-group">
+        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="GoToPreviousWeek">← Previous</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" disabled="@IsCurrentWeek" @onclick="GoToThisWeek">This week</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="GoToNextWeek">Next →</button>
+    </div>
+</div>
+
+<ResultAlert Message="@_message" Errors="@_errors" />
+
+@if (_loading)
+{
+    <p class="text-muted">Loading…</p>
+}
+else if (_project is null)
+{
+    <div class="alert alert-warning py-2">
+        You're not assigned to this project as a consultant, so there's no timesheet for you here.
+        <a href="/consultant/projects" class="alert-link">See your projects</a>.
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+            <span class="badge @TimesheetStatusClass">@TimesheetStatusLabel</span>
+            <span class="ms-2 text-muted small">@WeekTotalLabel</span>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary btn-sm"
+                    disabled="@(!CanSubmit || _busy)" @onclick="SubmitAsync">
+                Submit for approval
+            </button>
+        </div>
+    </div>
+
+    @if (_timesheet is not null && _timesheet.Status == TimesheetStatus.Rejected)
+    {
+        <div class="alert alert-danger py-2">
+            <strong>Your manager sent this week back.</strong>
+            @if (!string.IsNullOrWhiteSpace(_timesheet.OverallManagerFeedback))
+            {
+                <div class="mt-1">@_timesheet.OverallManagerFeedback</div>
+            }
+            <div class="small mt-1">Every entry is open for editing again. Fix them and submit the week once more.</div>
+        </div>
+    }
+    else if (RejectedEntryCount > 0)
+    {
+        <div class="alert alert-warning py-2">
+            <strong>@RejectedEntryHeading</strong>
+            <div class="small mt-1">Marked below. Editing one sends it back to your manager for another look.</div>
+        </div>
+    }
+
+    @if (_timesheet is not null && _timesheet.Status == TimesheetStatus.Submitted)
+    {
+        <div class="alert alert-info py-2">
+            This week is with your manager. You can't change it unless they send something back.
+        </div>
+    }
+
+    @if (Days.Contains(Today))
+    {
+        <div class="alert @TodayBudgetClass py-2">
+            @TodayBudgetLabel
+        </div>
+    }
+
+    @foreach (var day in Days)
+    {
+        <div class="card mb-2">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <div>
+                    <strong>@DayLabel(day)</strong>
+                    @if (day == Today)
+                    {
+                        <span class="badge text-bg-primary ms-2">Today</span>
+                    }
+                    else if (day < Today)
+                    {
+                        <span class="badge text-bg-light text-dark ms-2">Closed</span>
+                    }
+                    else
+                    {
+                        <span class="badge text-bg-light text-dark ms-2">Not yet</span>
+                    }
+                </div>
+                <span class="text-muted small">@DayTotalLabel(day)</span>
+            </div>
+            <div class="card-body py-2">
+                @if (EntriesFor(day).Count == 0)
+                {
+                    <p class="text-muted small mb-0">Nothing logged.</p>
+                }
+                @foreach (var entry in EntriesFor(day))
+                {
+                    <div class="border-bottom py-2">
+                        @if (_editingEntryId == entry.Id)
+                        {
+                            <div class="row g-2 align-items-end">
+                                <div class="col-6 col-md-2">
+                                    <label class="form-label small mb-1">Hours</label>
+                                    <input type="number" step="0.25" min="0.25" max="24"
+                                           class="form-control form-control-sm" @bind="_editHours" />
+                                </div>
+                                <div class="col-12 col-md-7">
+                                    <label class="form-label small mb-1">Description</label>
+                                    <input type="text" maxlength="1000"
+                                           class="form-control form-control-sm" @bind="_editDescription" />
+                                </div>
+                                <div class="col-12 col-md-3 d-flex gap-1">
+                                    <button type="button" class="btn btn-primary btn-sm"
+                                            disabled="@_busy" @onclick="SaveEditAsync">Save</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                                            @onclick="CancelEdit">Cancel</button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                                <div>
+                                    <strong>@HoursLabel(entry.HoursWorked)</strong>
+                                    <span class="badge @EntryStatusClass(entry.Status) ms-2">@entry.Status</span>
+                                    <div class="small">@DescriptionLabel(entry)</div>
+                                    @if (entry.Status == EntryStatus.Rejected && !string.IsNullOrWhiteSpace(entry.ManagerFeedback))
+                                    {
+                                        <div class="small text-danger mt-1">Manager: @entry.ManagerFeedback</div>
+                                    }
+                                </div>
+                                <div class="text-nowrap">
+                                    @if (CanEdit(entry))
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1"
+                                                disabled="@_busy" @onclick="() => StartEdit(entry)">Edit</button>
+                                        <ConfirmButton Text="Remove"
+                                                       ConfirmText="Really remove?"
+                                                       Disabled="@_busy"
+                                                       OnConfirmed="() => DeleteAsync(entry)" />
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Locked</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (day == Today && CanLogToday)
+                {
+                    <div class="row g-2 align-items-end pt-2">
+                        <div class="col-6 col-md-2">
+                            <label class="form-label small mb-1" for="new-hours">Hours</label>
+                            <input id="new-hours" type="number" step="0.25" min="0.25" max="24"
+                                   class="form-control form-control-sm" @bind="_newHours" />
+                        </div>
+                        <div class="col-12 col-md-7">
+                            <label class="form-label small mb-1" for="new-description">What did you work on?</label>
+                            <input id="new-description" type="text" maxlength="1000"
+                                   class="form-control form-control-sm" @bind="_newDescription" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <button type="button" class="btn btn-primary btn-sm w-100"
+                                    disabled="@_busy" @onclick="AddEntryAsync">Log time</button>
+                        </div>
+                    </div>
+                }
+                else if (day == Today && !CanLogToday)
+                {
+                    <p class="text-muted small mb-0 pt-2">@ClosedTodayMessage</p>
+                }
+            </div>
+        </div>
+    }
+
+    <p class="text-muted small mt-3">
+        Time can only be logged on the day you did the work, so past days close automatically. If you missed
+        something, ask your manager to reject that week or entry — that reopens it for editing.
+    </p>
+}
+
+@code {
+    private TimesheetDto? _timesheet;
+    private ConsultantProjectSummaryDto? _project;
+    private List<DailyTotalDto> _dailyTotals = new();
+
+    private DateOnly _weekStart;
+    private int? _loadedProjectId;
+    private DateOnly? _loadedWeek;
+
+    private decimal? _newHours;
+    private string? _newDescription;
+
+    private int? _editingEntryId;
+    private decimal? _editHours;
+    private string? _editDescription;
+
+    private string? _message;
+    private List<string>? _errors;
+    private bool _loading = true;
+    private bool _busy;
+
+    [Parameter] public int ProjectId { get; set; }
+
+    /// <summary>yyyy-MM-dd. Missing or unparseable falls back to the current week.</summary>
+    [Parameter] public string? WeekStart { get; set; }
+
+    private static DateOnly Today => TimeRules.Today;
+
+    private IReadOnlyList<DateOnly> Days => TimeRules.DaysOfWeek(_weekStart);
+
+    private bool IsCurrentWeek => _weekStart == TimeRules.CurrentWeekStart();
+
+    private string ProjectHeading => _project?.ProjectName ?? _timesheet?.ProjectName ?? "Timesheet";
+
+    private string WeekRangeLabel =>
+        _weekStart.ToString("d MMM") + " – " + _weekStart.AddDays(6).ToString("d MMM yyyy");
+
+    private string SubHeading => string.IsNullOrEmpty(_project?.ClientName)
+        ? WeekRangeLabel
+        : _project!.ClientName + " · " + WeekRangeLabel;
+
+    private string WeekTotalLabel => "Week total: " + HoursLabel(_timesheet?.TotalHours ?? 0m);
+
+    private TimesheetStatus? Status => _timesheet?.Status;
+
+    /// <summary>
+    /// A week with no timesheet row yet counts as open — the row gets created
+    /// the moment the first entry is logged.
+    /// </summary>
+    private bool TimesheetOpen =>
+        Status is null or TimesheetStatus.Draft or TimesheetStatus.Rejected;
+
+    private bool CanLogToday => TimesheetOpen && Days.Contains(Today);
+
+    private bool CanSubmit =>
+        _timesheet is not null
+        && _timesheet.Entries.Count > 0
+        && _timesheet.Status is TimesheetStatus.Draft or TimesheetStatus.Rejected;
+
+    private int RejectedEntryCount =>
+        _timesheet?.Entries.Count(e => e.Status == EntryStatus.Rejected) ?? 0;
+
+    private string RejectedEntryHeading => RejectedEntryCount == 1
+        ? "Your manager rejected one entry."
+        : "Your manager rejected " + RejectedEntryCount + " entries.";
+
+    private string TimesheetStatusLabel => Status?.ToString() ?? "Not started";
+
+    private string TimesheetStatusClass => Status switch
+    {
+        TimesheetStatus.Draft => "text-bg-secondary",
+        TimesheetStatus.Submitted => "text-bg-info",
+        TimesheetStatus.Approved => "text-bg-success",
+        TimesheetStatus.Rejected => "text-bg-danger",
+        _ => "text-bg-light text-dark"
+    };
+
+    private string ClosedTodayMessage => Status == TimesheetStatus.Submitted
+        ? "This week has been submitted, so today is closed to new entries."
+        : "This week has been approved, so no more time can be added to it.";
+
+    // ---------- The 24-hour cross-project cap ----------
+
+    private decimal AllProjectsToday => _dailyTotals.FirstOrDefault(d => d.Date == Today)?.Hours ?? 0m;
+
+    private decimal RemainingToday => Math.Max(TimeRules.MaxHoursPerDay - AllProjectsToday, 0m);
+
+    private string TodayBudgetLabel =>
+        "Today you've logged " + HoursLabel(AllProjectsToday) + " across all your projects — "
+        + HoursLabel(RemainingToday) + " left before you hit the " + TimeRules.MaxHoursPerDay + "-hour daily limit.";
+
+    private string TodayBudgetClass => RemainingToday <= 0m
+        ? "alert-danger"
+        : RemainingToday <= 2m ? "alert-warning" : "alert-light";
+
+    // ---------- Loading ----------
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var week = TimeRules.ParseWeekStart(WeekStart);
+
+        if (_loadedProjectId == ProjectId && _loadedWeek == week) return;
+
+        var projectChanged = _loadedProjectId != ProjectId;
+        _loadedProjectId = ProjectId;
+        _loadedWeek = week;
+        _weekStart = week;
+
+        ClearFeedback();
+        CancelEdit();
+        _newHours = null;
+        _newDescription = null;
+
+        if (projectChanged)
+        {
+            // Confirms this is actually one of their projects before showing a
+            // logging form. The service layer would reject the entry anyway,
+            // but failing at submit time reads like a bug rather than an answer.
+            var myProjects = await Api.GetMyProjectsAsync();
+            _project = myProjects.FirstOrDefault(p => p.ProjectId == ProjectId);
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+
+        // Viewing a week doesn't create a timesheet — null just means nothing
+        // has been logged against this project that week yet.
+        _timesheet = await Api.GetTimesheetForWeekAsync(ProjectId, _weekStart);
+        _dailyTotals = await Api.GetDailyTotalsAsync(_weekStart);
+
+        _loading = false;
+    }
+
+    // ---------- Week navigation ----------
+
+    private void GoToPreviousWeek() => GoToWeek(_weekStart.AddDays(-7));
+
+    private void GoToNextWeek() => GoToWeek(_weekStart.AddDays(7));
+
+    private void GoToThisWeek() => GoToWeek(TimeRules.CurrentWeekStart());
+
+    private void GoToWeek(DateOnly week) =>
+        Nav.NavigateTo("/consultant/timesheet/" + ProjectId + "/" + TimeRules.ToRouteValue(week));
+
+    // ---------- Entries ----------
+
+    private List<TimesheetEntryDto> EntriesFor(DateOnly day) =>
+        _timesheet?.Entries.Where(e => e.Date == day).OrderBy(e => e.Id).ToList()
+        ?? new List<TimesheetEntryDto>();
+
+    private decimal DayTotal(DateOnly day) => EntriesFor(day).Sum(e => e.HoursWorked);
+
+    private string DayTotalLabel(DateOnly day)
+    {
+        var onThisProject = DayTotal(day);
+        var everywhere = _dailyTotals.FirstOrDefault(d => d.Date == day)?.Hours ?? 0m;
+
+        // Only worth spelling out the difference when they worked elsewhere too.
+        return everywhere > onThisProject
+            ? HoursLabel(onThisProject) + " here · " + HoursLabel(everywhere) + " all projects"
+            : HoursLabel(onThisProject);
+    }
+
+    /// <summary>
+    /// Mirrors the service rule: a rejected entry is always open, otherwise
+    /// it's today's entry on a week that hasn't been submitted.
+    /// </summary>
+    private bool CanEdit(TimesheetEntryDto entry) =>
+        entry.Status == EntryStatus.Rejected || (entry.Date == Today && TimesheetOpen);
+
+    private async Task AddEntryAsync()
+    {
+        ClearFeedback();
+
+        if (_newHours is null or <= 0)
+        {
+            ShowError("Enter how many hours you worked.");
+            return;
+        }
+
+        // Caught here so an over-24 day fails instantly rather than after a
+        // round trip. The service layer re-checks it against every project.
+        if (_newHours > RemainingToday)
+        {
+            ShowError("That would put you over " + TimeRules.MaxHoursPerDay + " hours for today across all your projects. You have "
+                      + HoursLabel(RemainingToday) + " left.");
+            return;
+        }
+
+        _busy = true;
+
+        var result = await Api.AddEntryAsync(new AddEntryRequest
+        {
+            ProjectId = ProjectId,
+            WeekStarting = _weekStart,
+            Date = Today,
+            HoursWorked = _newHours.Value,
+            Description = _newDescription
+        });
+
+        if (result.Success)
+        {
+            _message = "Logged " + HoursLabel(result.Data!.HoursWorked) + ".";
+            _newHours = null;
+            _newDescription = null;
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    private void StartEdit(TimesheetEntryDto entry)
+    {
+        ClearFeedback();
+        _editingEntryId = entry.Id;
+        _editHours = entry.HoursWorked;
+        _editDescription = entry.Description;
+    }
+
+    private void CancelEdit()
+    {
+        _editingEntryId = null;
+        _editHours = null;
+        _editDescription = null;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (_editingEntryId is null) return;
+
+        ClearFeedback();
+
+        if (_editHours is null or <= 0)
+        {
+            ShowError("Enter how many hours you worked.");
+            return;
+        }
+
+        _busy = true;
+
+        var result = await Api.UpdateEntryAsync(_editingEntryId.Value, new UpdateEntryRequest
+        {
+            HoursWorked = _editHours.Value,
+            Description = _editDescription
+        });
+
+        if (result.Success)
+        {
+            _message = result.Data!.Status == EntryStatus.Pending
+                ? "Updated. It's back with your manager for review."
+                : "Entry updated.";
+            CancelEdit();
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    private async Task DeleteAsync(TimesheetEntryDto entry)
+    {
+        _busy = true;
+        ClearFeedback();
+
+        var result = await Api.DeleteEntryAsync(entry.Id);
+        if (result.Success)
+        {
+            _message = "Entry removed.";
+            if (_editingEntryId == entry.Id) CancelEdit();
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_timesheet is null) return;
+
+        _busy = true;
+        ClearFeedback();
+
+        var result = await Api.SubmitTimesheetAsync(_timesheet.Id);
+        if (result.Success)
+        {
+            _message = "Sent to your manager. This week is locked until they approve it or send something back.";
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    // ---------- Formatting ----------
+
+    private static string DayLabel(DateOnly day) => day.ToString("dddd d MMM");
+
+    private static string HoursLabel(decimal hours) => hours.ToString("0.##") + " h";
+
+    private static string DescriptionLabel(TimesheetEntryDto entry) =>
+        string.IsNullOrWhiteSpace(entry.Description) ? "No description" : entry.Description;
+
+    private static string EntryStatusClass(EntryStatus status) => status switch
+    {
+        EntryStatus.Pending => "text-bg-secondary",
+        EntryStatus.Approved => "text-bg-success",
+        EntryStatus.Rejected => "text-bg-danger",
+        _ => "text-bg-light text-dark"
+    };
+
+    private void ShowError(string error)
+    {
+        _message = null;
+        _errors = new List<string> { error };
+    }
+
+    private void ClearFeedback()
+    {
+        _message = null;
+        _errors = null;
+    }
+}

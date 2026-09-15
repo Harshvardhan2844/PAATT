@@ -1,0 +1,149 @@
+@page "/manager/timesheets"
+@attribute [Authorize(Roles = "Consultant")]
+@rendermode InteractiveAuto
+@inject IManagerApi Api
+
+<PageTitle>Review queue</PageTitle>
+
+<ManagerAttentionBanner />
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+    <h1 class="h3 mb-0">Review queue</h1>
+    <a class="btn btn-outline-secondary btn-sm" href="/manager/projects">Projects I manage</a>
+</div>
+
+<p class="text-muted">
+    Every week submitted on a project you manage. Unsubmitted weeks don't appear — a consultant's
+    draft is still theirs to change.
+</p>
+
+<ul class="nav nav-pills mb-3 gap-1">
+    @foreach (var option in FilterOptions)
+    {
+        <li class="nav-item">
+            <button type="button" class="nav-link @FilterClass(option)" @onclick="() => _filter = option">
+                @FilterLabel(option)
+                <span class="badge text-bg-light text-dark ms-1">@CountFor(option)</span>
+            </button>
+        </li>
+    }
+</ul>
+
+@if (_loading)
+{
+    <p class="text-muted">Loading…</p>
+}
+else if (Filtered.Count == 0)
+{
+    <p class="text-muted">@EmptyMessage</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Week</th>
+                    <th scope="col">Consultant</th>
+                    <th scope="col">Project</th>
+                    <th scope="col" class="text-end">Hours</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var timesheet in Filtered)
+                {
+                    <tr>
+                        <td class="text-nowrap">@WeekLabel(timesheet.WeekStartingDate)</td>
+                        <td>@timesheet.EmployeeName</td>
+                        <td>@timesheet.ProjectName</td>
+                        <td class="text-end">@HoursLabel(timesheet.TotalHours)</td>
+                        <td>
+                            <span class="badge @StatusClass(timesheet.Status)">@StatusLabel(timesheet.Status)</span>
+                            @if (RejectedEntryCount(timesheet) > 0)
+                            {
+                                <div class="small text-danger mt-1">@RejectedEntryLabel(timesheet)</div>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm @ReviewButtonClass(timesheet)" href="@ReviewUrl(timesheet)">
+                                @ReviewButtonLabel(timesheet)
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    // null = "All". Pending is the Submitted status — it's what's waiting on you.
+    private static readonly TimesheetStatus?[] FilterOptions =
+    {
+        TimesheetStatus.Submitted,
+        TimesheetStatus.Approved,
+        TimesheetStatus.Rejected,
+        null
+    };
+
+    private List<TimesheetDto> _timesheets = new();
+    private TimesheetStatus? _filter = TimesheetStatus.Submitted;
+    private bool _loading = true;
+
+    private List<TimesheetDto> Filtered =>
+        _filter is null ? _timesheets : _timesheets.Where(t => t.Status == _filter).ToList();
+
+    private string EmptyMessage => _timesheets.Count == 0
+        ? "Nothing has been submitted to you yet."
+        : "Nothing in this bucket.";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetched once, bucketed client-side, so switching tabs is instant.
+        _timesheets = await Api.GetQueueAsync();
+        _loading = false;
+    }
+
+    private int CountFor(TimesheetStatus? option) =>
+        option is null ? _timesheets.Count : _timesheets.Count(t => t.Status == option);
+
+    private string FilterClass(TimesheetStatus? option) => _filter == option ? "active" : string.Empty;
+
+    private static string FilterLabel(TimesheetStatus? option) =>
+        option is null ? "All" : StatusLabel(option.Value);
+
+    private static string StatusLabel(TimesheetStatus status) =>
+        status == TimesheetStatus.Submitted ? "Pending" : status.ToString();
+
+    private static string HoursLabel(decimal hours) => hours.ToString("0.##") + " h";
+
+    private static string WeekLabel(DateOnly weekStart) =>
+        weekStart.ToString("d MMM") + " – " + weekStart.AddDays(6).ToString("d MMM yyyy");
+
+    private static string StatusClass(TimesheetStatus status) => status switch
+    {
+        TimesheetStatus.Submitted => "text-bg-info",
+        TimesheetStatus.Approved => "text-bg-success",
+        TimesheetStatus.Rejected => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+
+    private static int RejectedEntryCount(TimesheetDto timesheet) =>
+        timesheet.Entries.Count(e => e.Status == EntryStatus.Rejected);
+
+    private static string RejectedEntryLabel(TimesheetDto timesheet)
+    {
+        var count = RejectedEntryCount(timesheet);
+        return count == 1 ? "1 entry sent back" : count + " entries sent back";
+    }
+
+    private static string ReviewButtonClass(TimesheetDto timesheet) =>
+        timesheet.Status == TimesheetStatus.Submitted ? "btn-primary" : "btn-outline-secondary";
+
+    private static string ReviewButtonLabel(TimesheetDto timesheet) =>
+        timesheet.Status == TimesheetStatus.Submitted ? "Review" : "Open";
+
+    private static string ReviewUrl(TimesheetDto timesheet) => "/manager/timesheet/" + timesheet.Id;
+}

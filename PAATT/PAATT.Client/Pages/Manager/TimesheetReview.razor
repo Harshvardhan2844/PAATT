@@ -1,8 +1,0 @@
-@page "/manager/timesheets"
-@rendermode InteractiveAuto
-@inject TimesheetApiService Timesheets
-<PageTitle>Timesheet Review</PageTitle>
-<h1>Timesheet Review</h1>
-<div class="btn-group mb-3"><button class="btn @(status == TimesheetStatus.Pending ? "btn-primary" : "btn-outline-primary")" @onclick="() => LoadAsync(TimesheetStatus.Pending)">Pending</button><button class="btn @(status == TimesheetStatus.Approved ? "btn-primary" : "btn-outline-primary")" @onclick="() => LoadAsync(TimesheetStatus.Approved)">Approved</button><button class="btn @(status == TimesheetStatus.Rejected ? "btn-primary" : "btn-outline-primary")" @onclick="() => LoadAsync(TimesheetStatus.Rejected)">Rejected</button></div>
-@if (error is not null) { <div class="alert alert-danger">@error</div> } else if (items is null) { <p>Loading timesheets…</p> } else { <table class="table"><thead><tr><th>Consultant</th><th>Project</th><th>Week</th><th>Hours</th><th>Status</th><th></th></tr></thead><tbody>@foreach (var item in items) { <tr><td>@item.ConsultantName</td><td>@item.ProjectName</td><td>@item.WeekStartDate</td><td>@item.TotalHours</td><td>@item.Status</td><td><a class="btn btn-sm btn-outline-primary" href="manager/timesheets/@item.Id">Review</a></td></tr> }</tbody></table> }
-@code { private TimesheetStatus status = TimesheetStatus.Pending; private IReadOnlyList<TimesheetDto>? items; private string? error; protected override Task OnInitializedAsync() => LoadAsync(status); private async Task LoadAsync(TimesheetStatus selected) { status = selected; try { error = null; items = await Timesheets.GetReviewAsync(status); } catch (Exception exception) { error = exception.Message; } } }

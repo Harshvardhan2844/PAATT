@@ -1,0 +1,135 @@
+@page "/consultant/projects"
+@attribute [Authorize(Roles = "Consultant")]
+@rendermode InteractiveAuto
+@inject IConsultantApi Api
+
+<PageTitle>My projects</PageTitle>
+
+<ConsultantAttentionBanner />
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+    <h1 class="h3 mb-0">My projects</h1>
+    <a class="btn btn-outline-secondary btn-sm" href="/consultant/timesheets">My timesheets</a>
+</div>
+
+<p class="text-muted">
+    These are the projects you've been assigned to as a consultant. Budgeted hours are yours alone —
+    they're set per person, so this isn't a share of some larger project total.
+</p>
+
+@if (_loading)
+{
+    <p class="text-muted">Loading…</p>
+}
+else if (_projects.Count == 0)
+{
+    <div class="alert alert-info py-2">
+        You're not assigned to any projects yet. An admin assigns people to projects — once that happens,
+        the project shows up here and you can start logging time.
+    </div>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var project in _projects)
+        {
+            <div class="col-12 col-lg-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <h2 class="h5 mb-1">@project.ProjectName</h2>
+                                <div class="text-muted small">@project.ClientName</div>
+                            </div>
+                            @if (project.IsBillable)
+                            {
+                                <span class="badge text-bg-success">Billable</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-light text-dark">Non-billable</span>
+                            }
+                        </div>
+
+                        <dl class="row mb-0 mt-3 small">
+                            <dt class="col-5 text-muted fw-normal">Manager</dt>
+                            <dd class="col-7 mb-1">@ManagerLabel(project)</dd>
+
+                            <dt class="col-5 text-muted fw-normal">Your budget</dt>
+                            <dd class="col-7 mb-1">@BudgetLabel(project)</dd>
+
+                            <dt class="col-5 text-muted fw-normal">You've logged</dt>
+                            <dd class="col-7 mb-1">@HoursLabel(project.LoggedHours)</dd>
+                        </dl>
+
+                        @if (project.BudgetedHours is > 0)
+                        {
+                            <div class="progress mt-2" role="progressbar" aria-label="Hours used against your budget"
+                                 aria-valuenow="@ProgressPercent(project)" aria-valuemin="0" aria-valuemax="100"
+                                 style="height: 0.5rem;">
+                                <div class="progress-bar @ProgressClass(project)" style="@ProgressStyle(project)"></div>
+                            </div>
+                            <div class="small text-muted mt-1">@ProgressLabel(project)</div>
+                        }
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a class="btn btn-primary btn-sm" href="@TimesheetUrl(project)">Log time this week</a>
+                        <a class="btn btn-outline-secondary btn-sm" href="@TimesheetsUrl(project)">Past weeks</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<ConsultantProjectSummaryDto> _projects = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _projects = await Api.GetMyProjectsAsync();
+        _loading = false;
+    }
+
+    private static string ManagerLabel(ConsultantProjectSummaryDto project) =>
+        string.IsNullOrEmpty(project.ManagerName) ? "Not assigned yet" : project.ManagerName;
+
+    private static string BudgetLabel(ConsultantProjectSummaryDto project) =>
+        project.BudgetedHours is null ? "Not set" : HoursLabel(project.BudgetedHours.Value);
+
+    private static string HoursLabel(decimal hours) => hours.ToString("0.##") + " h";
+
+    private static int ProgressPercent(ConsultantProjectSummaryDto project)
+    {
+        if (project.BudgetedHours is null or <= 0) return 0;
+        var percent = project.LoggedHours / project.BudgetedHours.Value * 100m;
+        return (int)Math.Clamp(percent, 0m, 100m);
+    }
+
+    private static string ProgressStyle(ConsultantProjectSummaryDto project) =>
+        "width: " + ProgressPercent(project) + "%";
+
+    private static string ProgressClass(ConsultantProjectSummaryDto project)
+    {
+        var percent = ProgressPercent(project);
+        if (project.BudgetedHours is > 0 && project.LoggedHours > project.BudgetedHours.Value) return "bg-danger";
+        return percent >= 90 ? "bg-warning" : "bg-primary";
+    }
+
+    private static string ProgressLabel(ConsultantProjectSummaryDto project)
+    {
+        if (project.BudgetedHours is null or <= 0) return string.Empty;
+
+        var remaining = project.BudgetedHours.Value - project.LoggedHours;
+        return remaining >= 0
+            ? HoursLabel(remaining) + " of your budget left"
+            : HoursLabel(Math.Abs(remaining)) + " over your budget";
+    }
+
+    private static string TimesheetUrl(ConsultantProjectSummaryDto project) =>
+        "/consultant/timesheet/" + project.ProjectId;
+
+    private static string TimesheetsUrl(ConsultantProjectSummaryDto project) =>
+        "/consultant/timesheets?projectId=" + project.ProjectId;
+}

@@ -1,0 +1,26 @@
+@rendermode InteractiveAuto
+@inject IManagerApi Api
+
+@if (_pendingCount > 0)
+{
+    <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+        <span><strong>Review queue:</strong> @_pendingCount @(_pendingCount == 1 ? "timesheet is" : "timesheets are") awaiting your decision.</span>
+        <a class="btn btn-sm btn-info" href="/manager/timesheets">Open queue</a>
+    </div>
+}
+
+@code {
+    private int _pendingCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _pendingCount = (await Api.GetQueueAsync(TimesheetStatus.Submitted)).Count;
+        }
+        catch
+        {
+            // A notification must never prevent a page from loading.
+        }
+    }
+}

@@ -1,0 +1,50 @@
+@*
+    Two-click delete. First click arms the button, second click fires
+    OnConfirmed. Deliberately avoids a JS confirm() dialog so the component
+    behaves identically when prerendered on the server and after it switches
+    to WebAssembly.
+*@
+
+<span class="text-nowrap">
+    <button type="button"
+            class="btn btn-sm @(_armed ? "btn-danger" : "btn-outline-danger")"
+            disabled="@Disabled"
+            title="@Title"
+            @onclick="HandleClickAsync">
+        @(_armed ? ConfirmText : Text)
+    </button>
+
+    @if (_armed)
+    {
+        <button type="button" class="btn btn-sm btn-link text-muted" @onclick="Cancel">Cancel</button>
+    }
+</span>
+
+@code {
+    private bool _armed;
+
+    [Parameter] public string Text { get; set; } = "Delete";
+
+    [Parameter] public string ConfirmText { get; set; } = "Really delete?";
+
+    /// <summary>Tooltip — useful for explaining why the button is disabled.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public EventCallback OnConfirmed { get; set; }
+
+    private async Task HandleClickAsync()
+    {
+        if (!_armed)
+        {
+            _armed = true;
+            return;
+        }
+
+        _armed = false;
+        await OnConfirmed.InvokeAsync();
+    }
+
+    private void Cancel() => _armed = false;
+}

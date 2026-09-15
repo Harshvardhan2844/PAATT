@@ -1,0 +1,38 @@
+@* 
+    Renders whatever came back from a ServiceResult. Every Admin page has the
+    same two outcomes to show — a success line or a list of business-rule
+    errors — so they all render one of these near the top instead of hand-
+    rolling alert markup.
+*@
+
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <div class="alert alert-success py-2" role="status">@Message</div>
+}
+
+@if (Errors is { Count: > 0 })
+{
+    <div class="alert alert-danger py-2" role="alert">
+        @if (Errors.Count == 1)
+        {
+            <span>@Errors[0]</span>
+        }
+        else
+        {
+            <ul class="mb-0 ps-3">
+                @foreach (var error in Errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Success text, shown above any errors. Null or blank renders nothing.</summary>
+    [Parameter] public string? Message { get; set; }
+
+    /// <summary>Business-rule failures straight off ServiceResult.Errors.</summary>
+    [Parameter] public List<string>? Errors { get; set; }
+}

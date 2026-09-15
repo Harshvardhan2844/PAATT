@@ -1,0 +1,92 @@
+@page "/manager/projects"
+@attribute [Authorize(Roles = "Consultant")]
+@rendermode InteractiveAuto
+@inject IManagerApi Api
+
+<PageTitle>Projects I manage</PageTitle>
+
+<ManagerAttentionBanner />
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+    <h1 class="h3 mb-0">Projects I manage</h1>
+    <a class="btn btn-outline-secondary btn-sm" href="/manager/timesheets">Review queue</a>
+</div>
+
+@if (_loading)
+{
+    <p class="text-muted">Loading…</p>
+}
+else if (_projects.Count == 0)
+{
+    <div class="alert alert-info py-2">
+        You're not the manager on any project. An admin assigns one manager per project — until then
+        there's nothing to review here. If you log time yourself, your work is under
+        <a href="/consultant/projects" class="alert-link">My projects</a>.
+    </div>
+}
+else
+{
+    <p class="text-muted">
+        You approve the timesheets on these projects, and you see each consultant against their own
+        budget rather than a shared project total.
+    </p>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Project</th>
+                    <th scope="col">Client</th>
+                    <th scope="col">Billable</th>
+                    <th scope="col" class="text-center">Consultants</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var project in _projects)
+                {
+                    <tr>
+                        <td>@project.Name</td>
+                        <td>@project.ClientName</td>
+                        <td>
+                            @if (project.IsBillable)
+                            {
+                                <span class="badge text-bg-success">Billable</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-light text-dark">Non-billable</span>
+                            }
+                        </td>
+                        <td class="text-center">
+                            @if (project.ConsultantCount == 0)
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">@project.ConsultantCount</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" href="@DetailUrl(project)">Open</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<ProjectDto> _projects = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _projects = await Api.GetMyProjectsAsync();
+        _loading = false;
+    }
+
+    private static string DetailUrl(ProjectDto project) => "/manager/project/" + project.Id;
+}

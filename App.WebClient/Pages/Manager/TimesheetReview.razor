@@ -1,0 +1,393 @@
+@page "/manager/timesheet/{TimesheetId:int}"
+@attribute [Authorize(Roles = "Consultant")]
+@rendermode InteractiveAuto
+@inject IManagerApi Api
+
+<PageTitle>Review timesheet</PageTitle>
+
+@if (_loading)
+{
+    <p class="text-muted">Loading…</p>
+}
+else if (_timesheet is null)
+{
+    <div class="alert alert-warning py-2">
+        This timesheet isn't on a project you manage, or it hasn't been submitted yet.
+        <a href="/manager/timesheets" class="alert-link">Back to your queue</a>.
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+        <div>
+            <h1 class="h3 mb-1">@_timesheet.EmployeeName</h1>
+            <div class="text-muted">@_timesheet.ProjectName · @WeekLabel(_timesheet.WeekStartingDate)</div>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="/manager/timesheets">Back to queue</a>
+    </div>
+
+    <ResultAlert Message="@_message" Errors="@_errors" />
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+            <span class="badge @StatusClass(_timesheet.Status)">@StatusLabel(_timesheet.Status)</span>
+            <span class="ms-2 text-muted small">@TotalLabel</span>
+        </div>
+        @if (CanReviewWeek)
+        {
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-success btn-sm" disabled="@_busy" @onclick="ApproveAsync">
+                    Approve week
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm" disabled="@_busy"
+                        @onclick="ToggleWeekReject">
+                    Reject week
+                </button>
+            </div>
+        }
+    </div>
+
+    @if (_showWeekReject && CanReviewWeek)
+    {
+        <div class="card border-danger mb-3">
+            <div class="card-body">
+                <label class="form-label" for="week-feedback">What needs to change?</label>
+                <textarea id="week-feedback" class="form-control" rows="3" maxlength="1000"
+                          @bind="_weekFeedback"></textarea>
+                <div class="form-text">
+                    Rejecting the week reopens every entry for editing, even the closed days. If only one
+                    entry is wrong, reject that entry instead — it leaves the rest of the week alone.
+                </div>
+                <div class="mt-2 d-flex gap-2">
+                    <button type="button" class="btn btn-danger btn-sm" disabled="@_busy" @onclick="RejectWeekAsync">
+                        Send the week back
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ToggleWeekReject">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (_timesheet.Status == TimesheetStatus.Rejected && !string.IsNullOrWhiteSpace(_timesheet.OverallManagerFeedback))
+    {
+        <div class="alert alert-danger py-2">
+            <strong>You sent this week back.</strong>
+            <div class="mt-1">@_timesheet.OverallManagerFeedback</div>
+            <div class="small mt-1">It'll come back to you once they've fixed it and resubmitted.</div>
+        </div>
+    }
+
+    <h2 class="h5">Entries</h2>
+
+    @if (_timesheet.Entries.Count == 0)
+    {
+        <p class="text-muted">No entries on this timesheet.</p>
+    }
+    else
+    {
+        @foreach (var day in EntryDates)
+        {
+            <div class="card mb-2">
+                <div class="card-header d-flex justify-content-between align-items-center py-2">
+                    <strong>@DayLabel(day)</strong>
+                    <span class="text-muted small">@HoursLabel(DayTotal(day))</span>
+                </div>
+                <div class="card-body py-2">
+                    @foreach (var entry in EntriesFor(day))
+                    {
+                        <div class="border-bottom py-2">
+                            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                                <div>
+                                    <strong>@HoursLabel(entry.HoursWorked)</strong>
+                                    <span class="badge @EntryStatusClass(entry.Status) ms-2">@entry.Status</span>
+                                    <div class="small">@DescriptionLabel(entry)</div>
+                                    @if (entry.Status == EntryStatus.Rejected && !string.IsNullOrWhiteSpace(entry.ManagerFeedback))
+                                    {
+                                        <div class="small text-danger mt-1">You said: @entry.ManagerFeedback</div>
+                                    }
+                                </div>
+                                <div class="text-nowrap">
+                                    @if (CanRejectEntry(entry))
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                                disabled="@_busy" @onclick="() => StartEntryReject(entry)">
+                                            Reject entry
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+
+                            @if (_rejectingEntryId == entry.Id)
+                            {
+                                <div class="mt-2">
+                                    <label class="form-label small mb-1" for="entry-feedback">Why are you sending this one back?</label>
+                                    <textarea id="entry-feedback" class="form-control form-control-sm" rows="2"
+                                              maxlength="1000" @bind="_entryFeedback"></textarea>
+                                    <div class="mt-2 d-flex gap-2">
+                                        <button type="button" class="btn btn-danger btn-sm"
+                                                disabled="@_busy" @onclick="() => RejectEntryAsync(entry)">
+                                            Reject this entry
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                @onclick="CancelEntryReject">Cancel</button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+
+    <h2 class="h5 mt-4">History</h2>
+    <p class="text-muted small">
+        Every submission and decision on this week, oldest first — including rejections whose wording has
+        since been overwritten on the entry itself.
+    </p>
+
+    @if (_history.Count == 0)
+    {
+        <p class="text-muted">Nothing recorded yet.</p>
+    }
+    else
+    {
+        <ul class="list-group mb-4">
+            @foreach (var item in _history)
+            {
+                <li class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                        <div>
+                            <span class="badge @ActionClass(item.Action)">@ActionLabel(item)</span>
+                            <span class="ms-2">@item.ActorName</span>
+                            @if (!string.IsNullOrWhiteSpace(item.Feedback))
+                            {
+                                <div class="small mt-1">@item.Feedback</div>
+                            }
+                        </div>
+                        <span class="text-muted small text-nowrap">@TimeLabel(item.OccurredAtUtc)</span>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    private TimesheetDto? _timesheet;
+    private List<TimesheetReviewEventDto> _history = new();
+
+    private bool _showWeekReject;
+    private string? _weekFeedback;
+
+    private int? _rejectingEntryId;
+    private string? _entryFeedback;
+
+    private string? _message;
+    private List<string>? _errors;
+    private bool _loading = true;
+    private bool _busy;
+
+    [Parameter] public int TimesheetId { get; set; }
+
+    private bool CanReviewWeek => _timesheet?.Status == TimesheetStatus.Submitted;
+
+    private string TotalLabel => "Week total: " + HoursLabel(_timesheet?.TotalHours ?? 0m);
+
+    private List<DateOnly> EntryDates =>
+        _timesheet?.Entries.Select(e => e.Date).Distinct().OrderBy(d => d).ToList() ?? new List<DateOnly>();
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+
+        // Returns null for a week on somebody else's project, or one that
+        // hasn't been submitted — the scoping lives in the service layer.
+        _timesheet = await Api.GetTimesheetAsync(TimesheetId);
+        _history = _timesheet is null
+            ? new List<TimesheetReviewEventDto>()
+            : await Api.GetHistoryAsync(TimesheetId);
+
+        _loading = false;
+    }
+
+    private List<TimesheetEntryDto> EntriesFor(DateOnly day) =>
+        _timesheet?.Entries.Where(e => e.Date == day).OrderBy(e => e.Id).ToList()
+        ?? new List<TimesheetEntryDto>();
+
+    private decimal DayTotal(DateOnly day) => EntriesFor(day).Sum(e => e.HoursWorked);
+
+    /// <summary>
+    /// Mirrors the service rule: entries can be sent back on a submitted week,
+    /// or on an approved one if something turns up later. An entry that's
+    /// already rejected is waiting on the consultant, not on you.
+    /// </summary>
+    private bool CanRejectEntry(TimesheetEntryDto entry) =>
+        _timesheet is not null
+        && _timesheet.Status is TimesheetStatus.Submitted or TimesheetStatus.Approved
+        && entry.Status != EntryStatus.Rejected;
+
+    private void ToggleWeekReject()
+    {
+        ClearFeedback();
+        _showWeekReject = !_showWeekReject;
+        _weekFeedback = null;
+    }
+
+    private void StartEntryReject(TimesheetEntryDto entry)
+    {
+        ClearFeedback();
+        _rejectingEntryId = entry.Id;
+        _entryFeedback = null;
+    }
+
+    private void CancelEntryReject()
+    {
+        _rejectingEntryId = null;
+        _entryFeedback = null;
+    }
+
+    private async Task ApproveAsync()
+    {
+        _busy = true;
+        ClearFeedback();
+
+        var result = await Api.ApproveTimesheetAsync(TimesheetId);
+        if (result.Success)
+        {
+            _message = "Approved. Any entries you'd already sent back stay rejected.";
+            _showWeekReject = false;
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    private async Task RejectWeekAsync()
+    {
+        ClearFeedback();
+
+        if (string.IsNullOrWhiteSpace(_weekFeedback))
+        {
+            ShowError("Tell them what needs to change — a rejection without a reason isn't much help.");
+            return;
+        }
+
+        _busy = true;
+
+        var result = await Api.RejectTimesheetAsync(TimesheetId, new RejectionRequest { Feedback = _weekFeedback! });
+        if (result.Success)
+        {
+            _message = "Sent back. Every entry is editable again on their side.";
+            _showWeekReject = false;
+            _weekFeedback = null;
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    private async Task RejectEntryAsync(TimesheetEntryDto entry)
+    {
+        ClearFeedback();
+
+        if (string.IsNullOrWhiteSpace(_entryFeedback))
+        {
+            ShowError("Tell them what's wrong with this entry.");
+            return;
+        }
+
+        _busy = true;
+
+        var result = await Api.RejectEntryAsync(entry.Id, new RejectionRequest { Feedback = _entryFeedback! });
+        if (result.Success)
+        {
+            _message = "That entry is back with them. The rest of the week is untouched.";
+            CancelEntryReject();
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    // ---------- Formatting ----------
+
+    private static string HoursLabel(decimal hours) => hours.ToString("0.##") + " h";
+
+    private static string DayLabel(DateOnly day) => day.ToString("dddd d MMM");
+
+    private static string WeekLabel(DateOnly weekStart) =>
+        weekStart.ToString("d MMM") + " – " + weekStart.AddDays(6).ToString("d MMM yyyy");
+
+    private static string TimeLabel(DateTime utc) => utc.ToLocalTime().ToString("d MMM yyyy, HH:mm");
+
+    private static string DescriptionLabel(TimesheetEntryDto entry) =>
+        string.IsNullOrWhiteSpace(entry.Description) ? "No description" : entry.Description;
+
+    private static string StatusLabel(TimesheetStatus status) =>
+        status == TimesheetStatus.Submitted ? "Pending" : status.ToString();
+
+    private static string StatusClass(TimesheetStatus status) => status switch
+    {
+        TimesheetStatus.Submitted => "text-bg-info",
+        TimesheetStatus.Approved => "text-bg-success",
+        TimesheetStatus.Rejected => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+
+    private static string EntryStatusClass(EntryStatus status) => status switch
+    {
+        EntryStatus.Pending => "text-bg-secondary",
+        EntryStatus.Approved => "text-bg-success",
+        EntryStatus.Rejected => "text-bg-danger",
+        _ => "text-bg-light text-dark"
+    };
+
+    private static string ActionClass(ReviewAction action) => action switch
+    {
+        ReviewAction.Submitted => "text-bg-info",
+        ReviewAction.Approved => "text-bg-success",
+        ReviewAction.Rejected => "text-bg-danger",
+        ReviewAction.EntryRejected => "text-bg-warning",
+        _ => "text-bg-secondary"
+    };
+
+    private static string ActionLabel(TimesheetReviewEventDto item) => item.Action switch
+    {
+        ReviewAction.Submitted => "Submitted",
+        ReviewAction.Approved => "Approved",
+        ReviewAction.Rejected => "Week rejected",
+        ReviewAction.EntryRejected => item.EntryDate is null
+            ? "Entry rejected"
+            : "Entry rejected · " + item.EntryDate.Value.ToString("d MMM"),
+        _ => item.Action.ToString()
+    };
+
+    private void ShowError(string error)
+    {
+        _message = null;
+        _errors = new List<string> { error };
+    }
+
+    private void ClearFeedback()
+    {
+        _message = null;
+        _errors = null;
+    }
+}

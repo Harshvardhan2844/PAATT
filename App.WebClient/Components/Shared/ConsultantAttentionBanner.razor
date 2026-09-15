@@ -1,0 +1,28 @@
+@rendermode InteractiveAuto
+@inject IConsultantApi Api
+
+@if (_attentionCount > 0)
+{
+    <div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2" role="alert">
+        <span><strong>Action needed:</strong> @_attentionCount rejected @(_attentionCount == 1 ? "item needs" : "items need") your attention.</span>
+        <a class="btn btn-sm btn-warning" href="/consultant/timesheets">Review timesheets</a>
+    </div>
+}
+
+@code {
+    private int _attentionCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var sheets = await Api.GetMyTimesheetsAsync();
+            _attentionCount = sheets.Count(t => t.Status == TimesheetStatus.Rejected)
+                + sheets.Sum(t => t.Entries.Count(e => e.Status == EntryStatus.Rejected));
+        }
+        catch
+        {
+            // A notification must never prevent a page from loading.
+        }
+    }
+}

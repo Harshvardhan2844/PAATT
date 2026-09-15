@@ -1,8 +1,0 @@
-@page "/login"
-@rendermode InteractiveAuto
-@inject AccountApiService Account
-@inject NavigationManager Navigation
-
-<PageTitle>Sign in</PageTitle>
-<div class="row justify-content-center"><div class="col-md-5"><div class="card shadow-sm"><div class="card-body p-4"><h1 class="h3">Sign in to PAATT</h1><p class="text-muted">Use the development account to explore every role.</p><EditForm Model="form" OnValidSubmit="SignInAsync"><DataAnnotationsValidator /><ValidationSummary /><div class="mb-3"><label class="form-label">Email</label><InputText class="form-control" type="email" @bind-Value="form.Email" /><ValidationMessage For="@(() => form.Email)" /></div><div class="mb-3"><label class="form-label">Password</label><InputText class="form-control" type="password" @bind-Value="form.Password" /><ValidationMessage For="@(() => form.Password)" /></div>@if (error is not null) { <div class="alert alert-danger">@error</div> }<button class="btn btn-primary w-100" disabled="@busy">@(busy ? "Signing in…" : "Sign in")</button></EditForm><hr /><small class="text-muted">Development: admin@paatt.local / ChangeMe123!</small></div></div></div></div>
-@code { private readonly LoginDto form = new(); private string? error; private bool busy; private async Task SignInAsync() { busy = true; error = null; try { await Account.LoginAsync(form); Navigation.NavigateTo("/", true); } catch { error = "Sign-in failed. Check the email and password."; } finally { busy = false; } } }

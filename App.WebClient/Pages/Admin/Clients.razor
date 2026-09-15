@@ -1,0 +1,182 @@
+@page "/admin/clients"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveAuto
+@inject IAdminApi Api
+
+<PageTitle>Clients</PageTitle>
+
+<h1 class="h3 mb-2">Clients</h1>
+<p class="text-muted">
+    A client is the company a project is billed to. Every project belongs to exactly one client,
+    so add the client first, then create its projects on the <a href="/admin/projects">Projects</a> screen.
+</p>
+
+<ResultAlert Message="@_message" Errors="@_errors" />
+
+<div class="card mb-4">
+    <div class="card-header">@FormHeading</div>
+    <div class="card-body">
+        <EditForm Model="_model" OnValidSubmit="SaveAsync">
+            <DataAnnotationsValidator />
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label" for="company-name">Company name</label>
+                    <InputText id="company-name" class="form-control" @bind-Value="_model.CompanyName" />
+                    <ValidationMessage For="() => _model.CompanyName" class="text-danger small" />
+                </div>
+                <div class="col-md-6 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@_busy">
+                        @(_editingId is null ? "Add client" : "Save changes")
+                    </button>
+                    @if (_editingId is not null)
+                    {
+                        <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                    }
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <p class="text-muted">Loading clients…</p>
+}
+else if (_clients.Count == 0)
+{
+    <p class="text-muted">No clients yet. Add the first one above.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Company</th>
+                    <th scope="col" class="text-center">Projects</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var client in _clients)
+                {
+                    <tr>
+                        <td>@client.CompanyName</td>
+                        <td class="text-center">
+                            @if (client.ProjectCount == 0)
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">@client.ProjectCount</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-1"
+                                    disabled="@_busy" @onclick="() => StartEdit(client)">
+                                Edit
+                            </button>
+                            <ConfirmButton Disabled="@_busy"
+                                           Title="@DeleteHint(client)"
+                                           OnConfirmed="() => DeleteAsync(client)" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<ClientDto> _clients = new();
+    private ClientRequest _model = new();
+    private int? _editingId;
+
+    private string? _message;
+    private List<string>? _errors;
+    private bool _loading = true;
+    private bool _busy;
+
+    private string FormHeading => _editingId is null ? "Add a client" : "Edit client";
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _clients = await Api.GetClientsAsync();
+        _loading = false;
+    }
+
+    private void StartEdit(ClientDto client)
+    {
+        ClearFeedback();
+        _editingId = client.Id;
+        _model = new ClientRequest { CompanyName = client.CompanyName };
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+        _model = new ClientRequest();
+    }
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+        ClearFeedback();
+
+        var result = _editingId is null
+            ? await Api.CreateClientAsync(_model)
+            : await Api.UpdateClientAsync(_editingId.Value, _model);
+
+        if (result.Success)
+        {
+            _message = _editingId is null
+                ? "Added " + result.Data!.CompanyName + "."
+                : "Updated " + result.Data!.CompanyName + ".";
+            CancelEdit();
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    private async Task DeleteAsync(ClientDto client)
+    {
+        _busy = true;
+        ClearFeedback();
+
+        // The service refuses when the client still has projects — surfaced
+        // here as an error rather than cascading the projects away.
+        var result = await Api.DeleteClientAsync(client.Id);
+        if (result.Success)
+        {
+            _message = "Deleted " + client.CompanyName + ".";
+            if (_editingId == client.Id) CancelEdit();
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    private static string DeleteHint(ClientDto client) =>
+        client.ProjectCount > 0
+            ? "Move or delete this client's projects first."
+            : "Delete this client.";
+
+    private void ClearFeedback()
+    {
+        _message = null;
+        _errors = null;
+    }
+}

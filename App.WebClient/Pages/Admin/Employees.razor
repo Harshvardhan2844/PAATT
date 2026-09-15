@@ -1,0 +1,325 @@
+@page "/admin/employees"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode InteractiveAuto
+@inject IAdminApi Api
+
+<PageTitle>Employees</PageTitle>
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+    <h1 class="h3 mb-0">Employees</h1>
+    <a class="btn btn-outline-secondary btn-sm" href="/admin/assigned-employees">View assigned employees</a>
+</div>
+
+<p class="text-muted">
+    Everyone is created as a plain Consultant — there's no role picker here on purpose.
+    Whether someone acts as a <strong>Manager</strong> or a <strong>Consultant</strong> is decided per project
+    on the <a href="/admin/assignments">Project Assignments</a> screen. <strong>Admin</strong> is a separate
+    role you can grant on top; it never replaces Consultant, so an Admin can still be assigned to projects.
+</p>
+
+<ResultAlert Message="@_message" Errors="@_errors" />
+
+<div class="card mb-4">
+    <div class="card-header">
+        @FormHeading
+    </div>
+    <div class="card-body">
+        @if (_editing is null)
+        {
+            <EditForm Model="_createModel" OnValidSubmit="CreateAsync">
+                <DataAnnotationsValidator />
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label" for="new-name">Name</label>
+                        <InputText id="new-name" class="form-control" @bind-Value="_createModel.Name" />
+                        <ValidationMessage For="() => _createModel.Name" class="text-danger small" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="new-email">Email</label>
+                        <InputText id="new-email" type="email" class="form-control" @bind-Value="_createModel.Email" />
+                        <ValidationMessage For="() => _createModel.Email" class="text-danger small" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="new-password">Initial password</label>
+                        <InputText id="new-password" type="password" class="form-control" @bind-Value="_createModel.Password" />
+                        <ValidationMessage For="() => _createModel.Password" class="text-danger small" />
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-primary" disabled="@_busy">Add employee</button>
+                </div>
+            </EditForm>
+        }
+        else
+        {
+            <EditForm Model="_editModel" OnValidSubmit="SaveEditAsync">
+                <DataAnnotationsValidator />
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label" for="edit-name">Name</label>
+                        <InputText id="edit-name" class="form-control" @bind-Value="_editModel.Name" />
+                        <ValidationMessage For="() => _editModel.Name" class="text-danger small" />
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label" for="edit-email">Email (also their login)</label>
+                        <InputText id="edit-email" type="email" class="form-control" @bind-Value="_editModel.Email" />
+                        <ValidationMessage For="() => _editModel.Email" class="text-danger small" />
+                    </div>
+                </div>
+                <div class="mt-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@_busy">Save changes</button>
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                </div>
+            </EditForm>
+        }
+    </div>
+</div>
+
+<div class="mb-3" style="max-width: 24rem;">
+    <input class="form-control" type="search" placeholder="Filter by name or email"
+           value="@_filter" @oninput="ApplyFilter" aria-label="Filter employees" />
+</div>
+
+@if (_loading)
+{
+    <p class="text-muted">Loading employees…</p>
+}
+else if (Filtered.Count == 0)
+{
+    <p class="text-muted">
+        @(_employees.Count == 0 ? "No employees yet. Add the first one above." : "No employees match that filter.")
+    </p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Assignments</th>
+                    <th scope="col" class="text-center">Admin</th>
+                    <th scope="col" class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var employee in Filtered)
+                {
+                    <tr>
+                        <td>
+                            @employee.Name
+                            @if (employee.Id == _currentUserId)
+                            {
+                                <span class="badge text-bg-light ms-1">you</span>
+                            }
+                        </td>
+                        <td class="text-break">@employee.Email</td>
+                        <td>
+                            @if (employee.ManagedProjectNames.Count == 0 && employee.ConsultantProjectNames.Count == 0)
+                            {
+                                <span class="text-muted small">Not assigned to any project</span>
+                            }
+                            @if (employee.ManagedProjectNames.Count > 0)
+                            {
+                                <div class="small">
+                                    <span class="badge text-bg-primary">Manager</span>
+                                    <span class="ms-1">@string.Join(", ", employee.ManagedProjectNames)</span>
+                                </div>
+                            }
+                            @if (employee.ConsultantProjectNames.Count > 0)
+                            {
+                                <div class="small">
+                                    <span class="badge text-bg-secondary">Consultant</span>
+                                    <span class="ms-1">@string.Join(", ", employee.ConsultantProjectNames)</span>
+                                </div>
+                            }
+                        </td>
+                        <td class="text-center">
+                            <div class="form-check form-switch d-inline-block">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       checked="@employee.IsAdmin"
+                                       disabled="@(_busy || employee.Id == _currentUserId)"
+                                       title="@AdminToggleHint(employee)"
+                                       @onchange="args => ToggleAdminAsync(employee, args.Value is true)" />
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-1"
+                                    disabled="@_busy" @onclick="() => StartEdit(employee)">
+                                Edit
+                            </button>
+                            <ConfirmButton Disabled="@(_busy || employee.Id == _currentUserId)"
+                                           Title="@DeleteHint(employee)"
+                                           OnConfirmed="() => DeleteAsync(employee)" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<EmployeeDto> _employees = new();
+    private CreateEmployeeRequest _createModel = new();
+    private UpdateEmployeeRequest _editModel = new();
+    private EmployeeDto? _editing;
+
+    private string _filter = string.Empty;
+    private string? _currentUserId;
+    private string? _message;
+    private List<string>? _errors;
+    private bool _loading = true;
+    private bool _busy;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private string FormHeading => _editing is null ? "Add an employee" : "Edit " + _editing.Name;
+
+    private List<EmployeeDto> Filtered =>
+        string.IsNullOrWhiteSpace(_filter)
+            ? _employees
+            : _employees
+                .Where(e => e.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase)
+                         || e.Email.Contains(_filter, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Used to stop an Admin from demoting or deleting themselves by
+        // accident. The service layer separately refuses to strip the last
+        // Admin, so this is belt-and-braces, not the only guard.
+        if (AuthenticationState is not null)
+        {
+            var state = await AuthenticationState;
+            _currentUserId = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _employees = await Api.GetEmployeesAsync();
+        _loading = false;
+    }
+
+    private void ApplyFilter(ChangeEventArgs args) => _filter = args.Value?.ToString() ?? string.Empty;
+
+    private async Task CreateAsync()
+    {
+        _busy = true;
+        ClearFeedback();
+
+        var result = await Api.CreateEmployeeAsync(_createModel);
+        if (result.Success)
+        {
+            _message = $"Added {result.Data!.Name}. They can sign in with that email and password.";
+            _createModel = new CreateEmployeeRequest();
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    private void StartEdit(EmployeeDto employee)
+    {
+        ClearFeedback();
+        _editing = employee;
+        _editModel = new UpdateEmployeeRequest { Name = employee.Name, Email = employee.Email };
+    }
+
+    private void CancelEdit()
+    {
+        _editing = null;
+        _editModel = new UpdateEmployeeRequest();
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (_editing is null) return;
+
+        _busy = true;
+        ClearFeedback();
+
+        var result = await Api.UpdateEmployeeAsync(_editing.Id, _editModel);
+        if (result.Success)
+        {
+            _message = $"Updated {result.Data!.Name}.";
+            CancelEdit();
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    private async Task ToggleAdminAsync(EmployeeDto employee, bool isAdmin)
+    {
+        _busy = true;
+        ClearFeedback();
+
+        var result = await Api.SetAdminAsync(employee.Id, isAdmin);
+        _message = result.Success
+            ? isAdmin
+                ? $"{employee.Name} is now an Admin (and still a Consultant)."
+                : $"Removed the Admin role from {employee.Name}."
+            : null;
+
+        if (!result.Success) _errors = result.Errors;
+
+        // Reload either way: on failure this also snaps the switch back to
+        // whatever the server actually thinks is true.
+        await LoadAsync();
+        _busy = false;
+    }
+
+    private async Task DeleteAsync(EmployeeDto employee)
+    {
+        _busy = true;
+        ClearFeedback();
+
+        var result = await Api.DeleteEmployeeAsync(employee.Id);
+        if (result.Success)
+        {
+            _message = $"Deleted {employee.Name}.";
+            if (_editing?.Id == employee.Id) CancelEdit();
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = result.Errors;
+        }
+
+        _busy = false;
+    }
+
+    private string AdminToggleHint(EmployeeDto employee) =>
+        employee.Id == _currentUserId
+            ? "You can't change your own Admin role."
+            : "Grant or revoke the Admin role. Their Consultant role is untouched.";
+
+    private string DeleteHint(EmployeeDto employee)
+    {
+        if (employee.Id == _currentUserId) return "You can't delete your own account.";
+        if (employee.ManagedProjectNames.Count > 0 || employee.ConsultantProjectNames.Count > 0)
+            return "Remove their project assignments first.";
+        return "Delete this employee.";
+    }
+
+    private void ClearFeedback()
+    {
+        _message = null;
+        _errors = null;
+    }
+}
