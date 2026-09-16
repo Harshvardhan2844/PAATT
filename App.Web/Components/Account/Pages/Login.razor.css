@@ -1,51 +1,180 @@
+/* ===================================================================
+   Login — sign-in screen
+   Inputs, validation messages and the status banner are rendered by
+   child components (InputText, ValidationMessage, StatusMessage), so
+   they are reached with ::deep from an element this component owns.
+=================================================================== */
+
 .login-page {
     align-items: center;
     display: flex;
     justify-content: center;
-    min-height: calc(100vh - 13rem);
-    padding: 3rem 1rem;
+    min-height: calc(100vh - 12rem);
+    padding: 2.5rem 1rem;
 }
 
 .login-card {
     background: #fff;
-    border: 1px solid #dce4df;
-    border-radius: .7rem;
-    box-shadow: 0 .75rem 1.8rem rgba(19, 43, 36, .12);
-    max-width: 39rem;
-    padding: 2.75rem 2.5rem 2rem;
+    border: 1px solid #e3e8e5;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15, 29, 25, .06), 0 12px 32px rgba(15, 29, 25, .07);
+    max-width: 26rem;
+    padding: 2.25rem 2rem 1.75rem;
     width: 100%;
 }
 
-.login-card__heading { margin-bottom: 2rem; text-align: center; }
-.login-card__heading h1 { color: #10251f; font-size: 2rem; letter-spacing: -.03em; margin: .4rem 0 .6rem; }
-.login-card__heading p:last-child { color: #5f6e68; margin: 0; }
-.eyebrow { color: #13715e; font-size: .75rem; font-weight: 800; letter-spacing: .12em; margin: 0; }
-.login-form { display: grid; gap: 1.25rem; }
-.field-group { display: grid; gap: .45rem; }
-.field-group label { color: #344840; font-size: .92rem; font-weight: 700; }
-.login-input {
+.login-card__heading {
+    margin-bottom: 1.75rem;
+    text-align: left;
+}
+
+.eyebrow {
+    color: #8b9994;
+    font-size: .6875rem;
+    font-weight: 650;
+    letter-spacing: .09em;
+    margin: 0;
+}
+
+.login-card__heading h1 {
+    color: #0f1d19;
+    font-size: 1.5rem;
+    font-weight: 650;
+    letter-spacing: -.02em;
+    margin: .5rem 0 .35rem;
+}
+
+.login-card__heading p:last-child {
+    color: #6b7a74;
+    font-size: .9375rem;
+    margin: 0;
+}
+
+/* Status banner from the StatusMessage component. */
+.login-card ::deep .alert {
+    border-radius: 7px;
+    font-size: .875rem;
+    margin-bottom: 1.25rem;
+    padding: .7rem .9rem;
+}
+
+.login-card ::deep .login-form {
+    display: grid;
+    gap: 1.1rem;
+}
+
+.field-group {
+    display: grid;
+    gap: .35rem;
+}
+
+.field-group label {
+    color: #0f1d19;
+    font-size: .8125rem;
+    font-weight: 600;
+}
+
+.login-card ::deep .login-input {
     background: #fff;
-    border: 1px solid #cfd9d4;
-    border-radius: .45rem;
+    border: 1px solid #cdd7d3;
+    border-radius: 6px;
     box-sizing: border-box;
-    color: #172d26;
+    color: #0f1d19;
     font: inherit;
-    min-height: 3.45rem;
-    padding: .75rem .9rem;
+    font-size: .9375rem;
+    min-height: 2.625rem;
+    padding: .55rem .75rem;
+    transition: border-color .13s ease, box-shadow .13s ease;
     width: 100%;
 }
-.login-input:focus { border-color: #18735f; box-shadow: 0 0 0 3px rgba(24, 115, 95, .14); outline: none; }
-.remember-me { align-items: center; color: #344840; display: flex; font-size: .95rem; gap: .6rem; }
-.remember-me input { accent-color: #14735e; height: 1.1rem; width: 1.1rem; }
-.login-submit { background: #167460; border: 1px solid #167460; border-radius: .45rem; color: #fff; cursor: pointer; font: inherit; font-weight: 750; min-height: 3.25rem; }
-.login-submit:hover, .login-submit:focus { background: #105d4d; border-color: #105d4d; }
-.login-links { display: flex; font-size: .92rem; justify-content: space-between; margin-top: 1.75rem; }
-.login-links a { color: #116b59; font-weight: 650; text-decoration: none; }
+
+.login-card ::deep .login-input::placeholder { color: #8b9994; }
+
+.login-card ::deep .login-input:hover:not(:focus) { border-color: #b3c1bb; }
+
+.login-card ::deep .login-input:focus {
+    border-color: #0f6b58;
+    box-shadow: 0 0 0 3px rgba(15, 107, 88, .18);
+    outline: none;
+}
+
+.remember-me {
+    align-items: center;
+    color: #33423c;
+    cursor: pointer;
+    display: flex;
+    font-size: .875rem;
+    gap: .5rem;
+    margin: -.2rem 0 .1rem;
+}
+
+.remember-me ::deep input {
+    accent-color: #0f6b58;
+    height: 1rem;
+    margin: 0;
+    width: 1rem;
+}
+
+.login-submit {
+    background: #0f6b58;
+    border: 1px solid #0f6b58;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-size: .9375rem;
+    font-weight: 600;
+    min-height: 2.75rem;
+    transition: background-color .13s ease, border-color .13s ease;
+}
+
+.login-submit:hover,
+.login-submit:focus-visible {
+    background: #0b5546;
+    border-color: #0b5546;
+}
+
+.login-submit:focus-visible {
+    box-shadow: 0 0 0 3px rgba(15, 107, 88, .18);
+    outline: none;
+}
+
+.login-submit:active { background: #084235; border-color: #084235; }
+
+.login-links {
+    border-top: 1px solid #eef2f0;
+    display: flex;
+    font-size: .875rem;
+    justify-content: flex-start;
+    margin-top: 1.5rem;
+    padding-top: 1.1rem;
+}
+
+.login-links a {
+    color: #0f6b58;
+    font-weight: 600;
+    text-decoration: none;
+}
+
 .login-links a:hover { text-decoration: underline; }
-.validation-message, .validation-summary { color: #b42318; font-size: .85rem; }
+
+/* Validation output from ValidationSummary / ValidationMessage. */
+.login-card ::deep .validation-summary,
+.login-card ::deep .validation-message {
+    color: #b3261e;
+    font-size: .8125rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.login-card ::deep .validation-summary:not(:empty) { margin-bottom: .25rem; }
 
 @media (max-width: 520px) {
-    .login-page { min-height: calc(100vh - 10rem); padding: 1.5rem .25rem; }
-    .login-card { padding: 2rem 1.25rem 1.5rem; }
-    .login-links { align-items: flex-start; flex-direction: column; gap: .7rem; }
+    .login-page {
+        min-height: calc(100vh - 9rem);
+        padding: 1.5rem .5rem;
+    }
+
+    .login-card { padding: 1.75rem 1.25rem 1.5rem; }
 }

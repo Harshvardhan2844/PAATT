@@ -1,13 +1,106 @@
-.overview-hero { margin-bottom: 2.75rem; }
-.eyebrow { color: #117160; font-size: .78rem; font-weight: 800; letter-spacing: .12em; margin: 0 0 .8rem; }
-.overview-hero h1 { font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -.045em; line-height: 1.08; margin: 0 0 .55rem; }
-.overview-hero > p:last-child { color: #52635c; font-size: 1.1rem; margin: 0; }
-.overview-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.consultant-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 48rem; }
-.overview-card { background: #fff; border: 1px solid #dce5df; border-radius: .7rem; color: inherit; display: block; min-height: 8.5rem; padding: 1.8rem; text-decoration: none; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
-.overview-card:hover { border-color: #8eb9aa; box-shadow: 0 .6rem 1.5rem rgba(21, 58, 47, .08); transform: translateY(-2px); }
-.overview-card span { color: #117160; font-size: .77rem; font-weight: 800; letter-spacing: .1em; }
-.overview-card h2 { font-size: 1.2rem; letter-spacing: -.02em; margin: .85rem 0 .7rem; }
-.overview-card p { color: #5d6c66; margin: 0; }
-@media (max-width: 1000px) { .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .overview-grid, .consultant-grid { grid-template-columns: 1fr; } .overview-card { min-height: auto; } }
+/* ===================================================================
+   Home — workspace overview
+   A page header followed by a set of entry points into the app.
+   The cards are numbered because the admin flow genuinely is a
+   sequence (clients → projects → assignments → people), so the
+   number is kept but treated as a quiet step marker, not decoration.
+=================================================================== */
+
+.overview-hero {
+    border-bottom: 1px solid #eef2f0;
+    margin-bottom: 2rem;
+    max-width: 44rem;
+    padding-bottom: 1.75rem;
+}
+
+.eyebrow {
+    color: #8b9994;
+    font-size: .6875rem;
+    font-weight: 650;
+    letter-spacing: .09em;
+    margin: 0 0 .7rem;
+}
+
+.overview-hero h1 {
+    color: #0f1d19;
+    font-size: clamp(1.75rem, 2.6vw, 2.125rem);
+    font-weight: 650;
+    letter-spacing: -.025em;
+    line-height: 1.15;
+    margin: 0 0 .5rem;
+}
+
+.overview-hero > p:last-child {
+    color: #6b7a74;
+    font-size: 1rem;
+    margin: 0;
+    max-width: 52ch;
+}
+
+.overview-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.consultant-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 42rem;
+}
+
+.overview-card {
+    background: #fff;
+    border: 1px solid #e3e8e5;
+    border-radius: 10px;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    min-height: 8rem;
+    padding: 1.25rem 1.25rem 1.35rem;
+    position: relative;
+    text-decoration: none;
+    transition: border-color .13s ease, box-shadow .13s ease;
+}
+
+.overview-card:hover,
+.overview-card:focus-visible {
+    border-color: #b7cec6;
+    box-shadow: 0 2px 10px rgba(15, 29, 25, .07);
+}
+
+/* Step marker */
+.overview-card span {
+    color: #a4b2ad;
+    font-size: .75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .04em;
+}
+
+.overview-card:hover span,
+.overview-card:focus-visible span { color: #0f6b58; }
+
+.overview-card h2 {
+    color: #0f1d19;
+    font-size: 1.0625rem;
+    font-weight: 650;
+    letter-spacing: -.015em;
+    margin: .6rem 0 .35rem;
+}
+
+.overview-card p {
+    color: #6b7a74;
+    font-size: .875rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+@media (max-width: 1080px) {
+    .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+    .overview-grid,
+    .consultant-grid { grid-template-columns: 1fr; }
+    .overview-card { min-height: auto; }
+}

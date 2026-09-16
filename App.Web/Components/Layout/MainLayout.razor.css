@@ -1,16 +1,312 @@
+/* ===================================================================
+   MainLayout — application shell
+   Header, role navigation sidebar, content well and footer.
+   Classes owned by child components (RoleMenu / RoleNavigation) are
+   reached with ::deep so the scoped stylesheet still applies to them.
+=================================================================== */
+
+.app-shell {
+    background: #f5f7f6;
+    color: #0f1d19;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ------------------------------- Header -------------------------------- */
+.app-header {
+    align-items: center;
+    background: rgba(255, 255, 255, .88);
+    backdrop-filter: saturate(180%) blur(10px);
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+    border-bottom: 1px solid #e3e8e5;
+    display: flex;
+    gap: 1.5rem;
+    justify-content: space-between;
+    min-height: 3.75rem;
+    padding: 0 max(1.75rem, calc((100vw - 1480px) / 2));
+    position: sticky;
+    top: 0;
+    z-index: 40;
+}
+
+.app-brand {
+    align-items: center;
+    color: #0f1d19;
+    display: flex;
+    flex: none;
+    font-size: 1.0625rem;
+    font-weight: 650;
+    gap: .6rem;
+    letter-spacing: -.02em;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.app-brand:hover { color: #0b5546; }
+
+.brand-mark {
+    align-items: center;
+    background: #0f6b58;
+    border-radius: 6px;
+    color: #fff;
+    display: inline-flex;
+    font-size: .8125rem;
+    font-weight: 700;
+    height: 1.75rem;
+    justify-content: center;
+    letter-spacing: -.01em;
+    width: 1.75rem;
+}
+
+/* Section links for the active role, rendered by RoleMenu. */
+.app-header ::deep .app-nav {
+    align-items: stretch;
+    align-self: stretch;
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: .25rem;
+}
+
+.app-header ::deep .nav-link {
+    align-items: center;
+    border-bottom: 2px solid transparent;
+    color: #6b7a74;
+    display: inline-flex;
+    font-size: .875rem;
+    font-weight: 600;
+    padding: 0 .7rem;
+    text-decoration: none;
+    transition: color .13s ease, border-color .13s ease;
+}
+
+.app-header ::deep .nav-link:hover,
+.app-header ::deep .nav-link:focus-visible {
+    border-bottom-color: #c3d5cf;
+    color: #0f1d19;
+}
+
+.app-header ::deep .nav-link.active {
+    border-bottom-color: #0f6b58;
+    color: #0f6b58;
+}
+
+/* ---------------------------- Account area ------------------------------ */
+.account-area {
+    align-items: center;
+    display: flex;
+    flex: none;
+    gap: .75rem;
+}
+
+.account-area form { margin: 0; }
+
+.sign-out-button,
+.sign-in-link {
+    background: #fff;
+    border: 1px solid #d4ded9;
+    border-radius: 5px;
+    color: #33423c;
+    cursor: pointer;
+    display: inline-block;
+    font: inherit;
+    font-size: .8125rem;
+    font-weight: 600;
+    padding: .35rem .8rem;
+    text-decoration: none;
+    transition: background-color .13s ease, border-color .13s ease, color .13s ease;
+}
+
+.sign-out-button:hover,
+.sign-out-button:focus-visible,
+.sign-in-link:hover,
+.sign-in-link:focus-visible {
+    background: #f5f8f6;
+    border-color: #b3c1bb;
+    color: #0f1d19;
+}
+
+.sign-in-link {
+    background: #0f6b58;
+    border-color: #0f6b58;
+    color: #fff;
+}
+
+.sign-in-link:hover,
+.sign-in-link:focus-visible {
+    background: #0b5546;
+    border-color: #0b5546;
+    color: #fff;
+}
+
+/* ------------------------------ Workspace ------------------------------- */
+.workspace-layout {
+    display: flex;
+    flex: 1;
+    margin: 0 auto;
+    max-width: 1480px;
+    width: 100%;
+}
+
+.app-sidebar {
+    align-self: stretch;
+    background: #fff;
+    border-right: 1px solid #e3e8e5;
+    flex: 0 0 14rem;
+    padding: 1.5rem .85rem 2rem;
+}
+
+.app-sidebar ::deep .sidebar-heading {
+    color: #8b9994;
+    font-size: .6875rem;
+    font-weight: 650;
+    letter-spacing: .08em;
+    margin: 0 .6rem .5rem;
+    text-transform: uppercase;
+}
+
+.app-sidebar ::deep .role-switch {
+    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    color: #4a5a54;
+    cursor: pointer;
+    display: block;
+    font: inherit;
+    font-size: .875rem;
+    font-weight: 600;
+    margin: 1px 0;
+    padding: .45rem .6rem;
+    text-align: left;
+    transition: background-color .13s ease, color .13s ease;
+    width: 100%;
+}
+
+.app-sidebar ::deep .role-switch:hover,
+.app-sidebar ::deep .role-switch:focus-visible {
+    background: #ecf2ef;
+    color: #0f1d19;
+    outline: none;
+}
+
+.app-sidebar ::deep .role-switch.active {
+    background: #0f6b58;
+    color: #fff;
+}
+
+.app-sidebar ::deep .nav-link {
+    border-radius: 6px;
+    color: #4a5a54;
+    display: block;
+    font-size: .875rem;
+    font-weight: 600;
+    margin: 1px 0;
+    padding: .45rem .6rem;
+    text-decoration: none;
+}
+
+.app-sidebar ::deep .nav-link:hover,
+.app-sidebar ::deep .nav-link:focus-visible {
+    background: #ecf2ef;
+    color: #0f1d19;
+}
+
+.app-content {
+    background: #f5f7f6;
+    box-sizing: border-box;
+    flex: 1;
+    min-width: 0;
+    padding: 2.25rem 2.5rem 4rem;
+}
+
+/* ------------------------------- Footer --------------------------------- */
+.app-footer {
+    align-items: center;
+    background: #f5f7f6;
+    border-top: 1px solid #e3e8e5;
+    color: #8b9994;
+    display: flex;
+    font-size: .8125rem;
+    gap: 1.25rem;
+    justify-content: space-between;
+    padding: 1rem max(1.75rem, calc((100vw - 1480px) / 2));
+}
+
+/* ----------------------------- Responsive ------------------------------- */
+@media (max-width: 960px) {
+    .app-content { padding: 2rem 1.75rem 3rem; }
+    .app-sidebar { flex-basis: 12.5rem; }
+}
+
+@media (max-width: 720px) {
+    .app-header {
+        align-items: center;
+        flex-wrap: wrap;
+        gap: .5rem;
+        padding: .6rem 1rem;
+    }
+
+    .app-header ::deep .app-nav {
+        gap: .1rem;
+        margin: 0 -1rem;
+        order: 3;
+        overflow-x: auto;
+        padding: 0 1rem;
+        width: calc(100% + 2rem);
+    }
+
+    .app-header ::deep .nav-link { padding: .4rem .55rem; }
+
+    .workspace-layout { display: block; }
+
+    .app-sidebar {
+        border-bottom: 1px solid #e3e8e5;
+        border-right: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .25rem;
+        padding: .7rem 1rem;
+        position: static;
+    }
+
+    .app-sidebar ::deep .sidebar-heading { margin: .1rem .25rem .1rem 0; width: 100%; }
+    .app-sidebar ::deep .role-switch,
+    .app-sidebar ::deep .nav-link { padding: .35rem .7rem; width: auto; }
+
+    .app-content { padding: 1.5rem 1rem 3rem; }
+
+    .app-footer {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: .3rem;
+        padding: 1rem;
+    }
+}
+
+/* ------------------------- Blazor error banner --------------------------- */
 #blazor-error-ui {
     color-scheme: light only;
-    background: lightyellow;
+    background: #fff8ea;
+    border-top: 1px solid #f0dcb4;
     bottom: 0;
-    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 -2px 10px rgba(15, 29, 25, .1);
     box-sizing: border-box;
+    color: #8a5a00;
     display: none;
+    font-size: .875rem;
     left: 0;
-    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    padding: .7rem 2.5rem .75rem 1.25rem;
     position: fixed;
     width: 100%;
     z-index: 1000;
 }
+
+    #blazor-error-ui .reload {
+        color: #8a5a00;
+        font-weight: 600;
+        margin-left: .5rem;
+    }
 
     #blazor-error-ui .dismiss {
         cursor: pointer;
@@ -18,36 +314,3 @@
         right: 0.75rem;
         top: 0.5rem;
     }
-.app-shell { background: #f7faf8; color: #152a23; display: flex; flex-direction: column; min-height: 100vh; }
-.app-header { align-items: center; background: rgba(255, 255, 255, .92); backdrop-filter: saturate(180%) blur(8px); -webkit-backdrop-filter: saturate(180%) blur(8px); border-bottom: 1px solid #dfe6e1; box-shadow: 0 1px 0 rgba(16, 37, 31, .02); display: flex; justify-content: space-between; min-height: 4.75rem; padding: .7rem max(2rem, calc((100vw - 1600px) / 2)); position: sticky; top: 0; z-index: 40; }
-.app-brand { align-items: center; color: #11271f; display: flex; font-size: 1.28rem; font-weight: 800; gap: .7rem; letter-spacing: -.03em; text-decoration: none; white-space: nowrap; }
-.brand-mark { align-items: center; background: linear-gradient(155deg, #1a8770, #0f5a49); border-radius: .55rem; box-shadow: 0 .3rem .7rem rgba(15, 90, 73, .28); color: #fff; display: inline-flex; font-size: 1rem; font-weight: 800; height: 2.25rem; justify-content: center; width: 2.25rem; }
-.app-nav { align-items: center; display: flex; flex: 1; flex-wrap: wrap; gap: .3rem; justify-content: center; }
-.nav-link, .user-link { border-radius: .4rem; color: #4b5d56; font-weight: 600; padding: .5rem .65rem; text-decoration: none; transition: background-color .15s ease, color .15s ease; }
-.nav-link:hover, .nav-link:focus, .user-link:hover, .user-link:focus { background: #eef5f1; color: #105f4e; }
-.account-area { align-items: center; border-left: 1px solid #dfe6e1; display: flex; gap: .8rem; padding-left: 1rem; }
-.account-area form { margin: 0; }
-.sign-out-button, .sign-in-link { background: #fff; border: 1px solid #d3ddd7; border-radius: .45rem; color: #274137; cursor: pointer; font: inherit; font-weight: 700; padding: .55rem .9rem; text-decoration: none; transition: background-color .15s ease, border-color .15s ease; }
-.sign-out-button:hover, .sign-out-button:focus, .sign-in-link:hover, .sign-in-link:focus { background: #f0f6f3; border-color: #aabdb4; }
-.workspace-layout { display: flex; flex: 1; margin: 0 auto; max-width: 1600px; width: 100%; }
-.app-sidebar { background: #fff; border-right: 1px solid #dfe6e1; flex: 0 0 16rem; padding: 1.5rem 1rem; }
-.sidebar-heading { color: #5d6c66; font-size: .72rem; font-weight: 750; letter-spacing: .08em; margin: 1rem .55rem .4rem; text-transform: uppercase; }
-.sidebar-heading:first-child { margin-top: 0; }
-.app-sidebar .nav-link { display: block; margin: .1rem 0; }
-.role-switch { background: transparent; border: 0; border-radius: .4rem; color: #4b5d56; cursor: pointer; display: block; font: inherit; font-weight: 700; margin: .1rem 0; padding: .5rem .55rem; text-align: left; width: 100%; }
-.role-switch:hover, .role-switch:focus { background: #eef5f1; color: #105f4e; outline: none; }
-.role-switch.active { background: #167460; color: #fff; }
-.app-content { flex: 1; min-width: 0; padding: 3rem; box-sizing: border-box; }
-.app-footer { border-top: 1px solid #dfe6e1; color: #687771; display: flex; font-size: .88rem; gap: 1.75rem; padding: 1.25rem max(2rem, calc((100vw - 1600px) / 2)); }
-
-@media (max-width: 720px) {
-    .app-header { align-items: flex-start; flex-wrap: wrap; gap: .5rem; padding: .8rem 1rem; }
-    .app-nav { justify-content: flex-start; order: 3; width: 100%; }
-    .workspace-layout { display: block; }
-    .app-sidebar { border-bottom: 1px solid #dfe6e1; border-right: 0; display: flex; flex-wrap: wrap; gap: .15rem .4rem; padding: .8rem 1rem; }
-    .app-sidebar .sidebar-heading { margin: .45rem .4rem .2rem; width: 100%; }
-    .app-sidebar .nav-link { padding: .35rem .45rem; }
-    .role-switch { padding: .35rem .45rem; width: auto; }
-    .app-content { padding: 2rem 1rem; }
-    .app-footer { flex-direction: column; gap: .35rem; padding: 1.25rem 1rem; }
-}
