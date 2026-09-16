@@ -1,61 +1,40 @@
 @rendermode InteractiveAuto
 @implements IDisposable
 @inject NavigationManager NavigationManager
+@inject RoleViewState RoleState
 
 @if (_ready)
 {
-    <nav aria-label="Role navigation">
+    <nav class="role-switcher" aria-label="Role navigation">
         <p class="sidebar-heading">Switch view</p>
 
         @if (_isAdmin)
         {
-            <button type="button" class="role-switch @RoleClass(Role.Admin)" @onclick="() => SelectRoleAsync(Role.Admin)">
+            <button type="button" class="role-switch @RoleClass(RoleView.Admin)" @onclick="() => SelectRoleAsync(RoleView.Admin)">
                 Admin
             </button>
         }
         @if (_isManager)
         {
-            <button type="button" class="role-switch @RoleClass(Role.Manager)" @onclick="() => SelectRoleAsync(Role.Manager)">
+            <button type="button" class="role-switch @RoleClass(RoleView.Manager)" @onclick="() => SelectRoleAsync(RoleView.Manager)">
                 Manager
             </button>
         }
         @if (_isConsultant)
         {
-            <button type="button" class="role-switch @RoleClass(Role.Consultant)" @onclick="() => SelectRoleAsync(Role.Consultant)">
+            <button type="button" class="role-switch @RoleClass(RoleView.Consultant)" @onclick="() => SelectRoleAsync(RoleView.Consultant)">
                 Consultant
             </button>
         }
 
-        <div class="role-menu">
-            @switch (_activeRole)
-            {
-                case Role.Admin:
-                    <a class="nav-link" href="/admin/clients">Clients</a>
-                    <a class="nav-link" href="/admin/projects">Projects</a>
-                    <a class="nav-link" href="/admin/assignments">Assignments</a>
-                    <a class="nav-link" href="/admin/employees">People</a>
-                    break;
-                case Role.Manager:
-                    <a class="nav-link" href="/manager/timesheets">Review queue</a>
-                    <a class="nav-link" href="/manager/projects">Managed projects</a>
-                    break;
-                case Role.Consultant:
-                    <a class="nav-link" href="/consultant/projects">My projects</a>
-                    <a class="nav-link" href="/consultant/timesheets">My timesheets</a>
-                    break;
-            }
-        </div>
     </nav>
 }
 
 @code {
-    private enum Role { Admin, Manager, Consultant }
-
     private bool _ready;
     private bool _isAdmin;
     private bool _isConsultant;
     private bool _isManager;
-    private Role _activeRole;
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationState { get; set; }
@@ -73,14 +52,13 @@
         _ready = true;
     }
 
-    private async Task SelectRoleAsync(Role role)
+    private void SelectRoleAsync(RoleView role)
     {
-        _activeRole = role;
-        await InvokeAsync(StateHasChanged);
+        RoleState.Select(role);
         NavigationManager.NavigateTo(role switch
         {
-            Role.Admin => "/admin/clients",
-            Role.Manager => "/manager/timesheets",
+            RoleView.Admin => "/admin/clients",
+            RoleView.Manager => "/manager/timesheets",
             _ => "/consultant/projects"
         });
     }
@@ -95,16 +73,16 @@
     {
         var path = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         if (path.StartsWith("admin", StringComparison.OrdinalIgnoreCase) && _isAdmin)
-            _activeRole = Role.Admin;
+            RoleState.Select(RoleView.Admin);
         else if (path.StartsWith("manager", StringComparison.OrdinalIgnoreCase) && _isManager)
-            _activeRole = Role.Manager;
+            RoleState.Select(RoleView.Manager);
         else if (_isConsultant)
-            _activeRole = Role.Consultant;
+            RoleState.Select(RoleView.Consultant);
         else if (_isAdmin)
-            _activeRole = Role.Admin;
+            RoleState.Select(RoleView.Admin);
     }
 
-    private string RoleClass(Role role) => _activeRole == role ? "active" : string.Empty;
+    private string RoleClass(RoleView role) => RoleState.ActiveView == role ? "active" : string.Empty;
 
     public void Dispose() => NavigationManager.LocationChanged -= OnLocationChanged;
 }

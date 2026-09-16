@@ -1,0 +1,50 @@
+@rendermode InteractiveAuto
+@implements IDisposable
+@inject RoleViewState RoleState
+
+@if (_ready && RoleState.ActiveView is { } view)
+{
+    <nav class="app-nav" aria-label="Selected role navigation">
+        @switch (view)
+        {
+            case RoleView.Admin when _isAdmin:
+                <a class="nav-link" href="/admin/clients">Clients</a>
+                <a class="nav-link" href="/admin/projects">Projects</a>
+                <a class="nav-link" href="/admin/assignments">Assignments</a>
+                <a class="nav-link" href="/admin/employees">People</a>
+                break;
+            case RoleView.Manager when _isManager:
+                <a class="nav-link" href="/manager/timesheets">Review queue</a>
+                <a class="nav-link" href="/manager/projects">Managed projects</a>
+                break;
+            case RoleView.Consultant when _isConsultant:
+                <a class="nav-link" href="/consultant/projects">My projects</a>
+                <a class="nav-link" href="/consultant/timesheets">My timesheets</a>
+                break;
+        }
+    </nav>
+}
+
+@code {
+    private bool _ready;
+    private bool _isAdmin;
+    private bool _isManager;
+    private bool _isConsultant;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = AuthenticationState is null ? null : await AuthenticationState;
+        _isAdmin = state?.User.IsInRole("Admin") == true;
+        _isManager = state?.User.IsInRole("Manager") == true;
+        _isConsultant = state?.User.IsInRole("Consultant") == true;
+        RoleState.Changed += OnRoleChanged;
+        _ready = true;
+    }
+
+    private void OnRoleChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => RoleState.Changed -= OnRoleChanged;
+}

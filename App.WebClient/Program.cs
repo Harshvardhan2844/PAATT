@@ -13,5 +13,6 @@ builder.Services.AddScoped(sp => new HttpClient
 builder.Services.AddScoped<IAdminApi, HttpAdminApi>();
 builder.Services.AddScoped<IConsultantApi, HttpConsultantApi>();
 builder.Services.AddScoped<IManagerApi, HttpManagerApi>();
+builder.Services.AddScoped<RoleViewState>();
 
 await builder.Build().RunAsync();

@@ -22,6 +22,7 @@
 .app-header { align-items: center; background: rgba(255, 255, 255, .92); backdrop-filter: saturate(180%) blur(8px); -webkit-backdrop-filter: saturate(180%) blur(8px); border-bottom: 1px solid #dfe6e1; box-shadow: 0 1px 0 rgba(16, 37, 31, .02); display: flex; justify-content: space-between; min-height: 4.75rem; padding: .7rem max(2rem, calc((100vw - 1600px) / 2)); position: sticky; top: 0; z-index: 40; }
 .app-brand { align-items: center; color: #11271f; display: flex; font-size: 1.28rem; font-weight: 800; gap: .7rem; letter-spacing: -.03em; text-decoration: none; white-space: nowrap; }
 .brand-mark { align-items: center; background: linear-gradient(155deg, #1a8770, #0f5a49); border-radius: .55rem; box-shadow: 0 .3rem .7rem rgba(15, 90, 73, .28); color: #fff; display: inline-flex; font-size: 1rem; font-weight: 800; height: 2.25rem; justify-content: center; width: 2.25rem; }
+.app-nav { align-items: center; display: flex; flex: 1; flex-wrap: wrap; gap: .3rem; justify-content: center; }
 .nav-link, .user-link { border-radius: .4rem; color: #4b5d56; font-weight: 600; padding: .5rem .65rem; text-decoration: none; transition: background-color .15s ease, color .15s ease; }
 .nav-link:hover, .nav-link:focus, .user-link:hover, .user-link:focus { background: #eef5f1; color: #105f4e; }
 .account-area { align-items: center; border-left: 1px solid #dfe6e1; display: flex; gap: .8rem; padding-left: 1rem; }
@@ -36,18 +37,17 @@
 .role-switch { background: transparent; border: 0; border-radius: .4rem; color: #4b5d56; cursor: pointer; display: block; font: inherit; font-weight: 700; margin: .1rem 0; padding: .5rem .55rem; text-align: left; width: 100%; }
 .role-switch:hover, .role-switch:focus { background: #eef5f1; color: #105f4e; outline: none; }
 .role-switch.active { background: #167460; color: #fff; }
-.role-menu { border-left: 2px solid #dfe6e1; margin: .45rem 0 .9rem .55rem; padding-left: .5rem; }
 .app-content { flex: 1; min-width: 0; padding: 3rem; box-sizing: border-box; }
 .app-footer { border-top: 1px solid #dfe6e1; color: #687771; display: flex; font-size: .88rem; gap: 1.75rem; padding: 1.25rem max(2rem, calc((100vw - 1600px) / 2)); }
 
 @media (max-width: 720px) {
-    .app-header { padding: .8rem 1rem; }
+    .app-header { align-items: flex-start; flex-wrap: wrap; gap: .5rem; padding: .8rem 1rem; }
+    .app-nav { justify-content: flex-start; order: 3; width: 100%; }
     .workspace-layout { display: block; }
     .app-sidebar { border-bottom: 1px solid #dfe6e1; border-right: 0; display: flex; flex-wrap: wrap; gap: .15rem .4rem; padding: .8rem 1rem; }
     .app-sidebar .sidebar-heading { margin: .45rem .4rem .2rem; width: 100%; }
     .app-sidebar .nav-link { padding: .35rem .45rem; }
     .role-switch { padding: .35rem .45rem; width: auto; }
-    .role-menu { display: flex; gap: .15rem .4rem; margin: .2rem 0 .35rem; padding-left: 0; border-left: 0; width: 100%; }
     .app-content { padding: 2rem 1rem; }
     .app-footer { flex-direction: column; gap: .35rem; padding: 1.25rem 1rem; }
 }

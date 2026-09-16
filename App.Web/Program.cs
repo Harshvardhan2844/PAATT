@@ -39,6 +39,7 @@ builder.Services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
 builder.Services.AddScoped<IAdminApi, ServerAdminApi>();
 builder.Services.AddScoped<IConsultantApi, ServerConsultantApi>();
 builder.Services.AddScoped<IManagerApi, ServerManagerApi>();
+builder.Services.AddScoped<RoleViewState>();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
