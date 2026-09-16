@@ -2,14 +2,18 @@
 
 <div class="app-shell">
     <header class="app-header">
-        <a class="app-brand" href="/">TimeTracker</a>
+        <a class="app-brand" href="/" aria-label="WorkLedger home">
+            <span class="brand-mark" aria-hidden="true">W</span>
+            <span>WorkLedger</span>
+        </a>
         <nav class="app-nav" aria-label="Primary navigation">
             <AuthorizeView Roles="Admin">
                 <Authorized>
-                    <a class="nav-link" href="/admin/employees">Employees</a>
+                    <a class="nav-link" href="/">Overview</a>
                     <a class="nav-link" href="/admin/clients">Clients</a>
                     <a class="nav-link" href="/admin/projects">Projects</a>
                     <a class="nav-link" href="/admin/assignments">Assignments</a>
+                    <a class="nav-link" href="/admin/employees">People</a>
                 </Authorized>
             </AuthorizeView>
             <AuthorizeView Roles="Consultant">
@@ -22,16 +26,27 @@
         </nav>
         <AuthorizeView>
             <Authorized>
-                <a class="account-link" href="/Account/Manage">Account</a>
+                <div class="account-area">
+                    <a class="user-link" href="/Account/Manage">Account</a>
+                    <form action="/Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="/Account/Login" />
+                        <button class="sign-out-button" type="submit">Sign out</button>
+                    </form>
+                </div>
             </Authorized>
             <NotAuthorized>
-                <a class="account-link" href="/Account/Login">Sign in</a>
+                <a class="sign-in-link" href="/Account/Login">Sign in</a>
             </NotAuthorized>
         </AuthorizeView>
     </header>
     <main class="app-content">
         @Body
     </main>
+    <footer class="app-footer">
+        <span>© @DateTime.UtcNow.Year WorkLedger</span>
+        <span>Project allocation &amp; time tracking</span>
+    </footer>
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>

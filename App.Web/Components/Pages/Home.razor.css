@@ -1,0 +1,13 @@
+.overview-hero { margin-bottom: 2.75rem; }
+.eyebrow { color: #117160; font-size: .78rem; font-weight: 800; letter-spacing: .12em; margin: 0 0 .8rem; }
+.overview-hero h1 { font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -.045em; line-height: 1.08; margin: 0 0 .55rem; }
+.overview-hero > p:last-child { color: #52635c; font-size: 1.1rem; margin: 0; }
+.overview-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.consultant-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 48rem; }
+.overview-card { background: #fff; border: 1px solid #dce5df; border-radius: .7rem; color: inherit; display: block; min-height: 8.5rem; padding: 1.8rem; text-decoration: none; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.overview-card:hover { border-color: #8eb9aa; box-shadow: 0 .6rem 1.5rem rgba(21, 58, 47, .08); transform: translateY(-2px); }
+.overview-card span { color: #117160; font-size: .77rem; font-weight: 800; letter-spacing: .1em; }
+.overview-card h2 { font-size: 1.2rem; letter-spacing: -.02em; margin: .85rem 0 .7rem; }
+.overview-card p { color: #5d6c66; margin: 0; }
+@media (max-width: 1000px) { .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .overview-grid, .consultant-grid { grid-template-columns: 1fr; } .overview-card { min-height: auto; } }

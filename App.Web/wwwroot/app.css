@@ -1,3 +1,266 @@
+/* ===================================================================
+   WorkLedger — Professional Theme
+   Design tokens + Bootstrap 5 component overrides layered on top of
+   the vendored bootstrap.min.css. This file only affects presentation;
+   no component markup, routes, or C# logic are changed by this theme.
+=================================================================== */
+
+:root {
+    --wl-primary: #167460;
+    --wl-primary-dark: #105d4d;
+    --wl-primary-darker: #0c4a3d;
+    --wl-primary-light: #e6f3ef;
+    --wl-primary-soft: #f0f8f5;
+    --wl-ink: #10251f;
+    --wl-body: #2c3b36;
+    --wl-muted: #5d6c66;
+    --wl-border: #dfe6e1;
+    --wl-border-soft: #eaefec;
+    --wl-surface: #ffffff;
+    --wl-bg: #f7faf8;
+    --wl-danger: #c0362c;
+    --wl-danger-soft: #fdecea;
+    --wl-warning: #b5790a;
+    --wl-warning-soft: #fff6e6;
+    --wl-info: #1c6f9c;
+    --wl-info-soft: #e9f4fb;
+    --wl-success: #1f8a5f;
+    --wl-radius-sm: .4rem;
+    --wl-radius: .6rem;
+    --wl-radius-lg: .9rem;
+    --wl-shadow-sm: 0 1px 2px rgba(16, 37, 31, .06);
+    --wl-shadow: 0 .35rem 1rem rgba(16, 37, 31, .08);
+    --wl-shadow-lg: 0 1rem 2.5rem rgba(16, 37, 31, .12);
+    --wl-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+    /* Re-point Bootstrap's own variables at the brand palette so every
+       Bootstrap component (buttons, badges, alerts, forms, nav-pills,
+       progress bars) automatically matches WorkLedger's look. */
+    --bs-primary: var(--wl-primary);
+    --bs-primary-rgb: 22, 116, 96;
+    --bs-body-font-family: var(--wl-font);
+    --bs-body-color: var(--wl-body);
+    --bs-body-bg: var(--wl-bg);
+    --bs-border-color: var(--wl-border);
+    --bs-link-color: var(--wl-primary);
+    --bs-link-hover-color: var(--wl-primary-dark);
+    --bs-border-radius: var(--wl-radius);
+    --bs-border-radius-sm: var(--wl-radius-sm);
+    --bs-border-radius-lg: var(--wl-radius-lg);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+body {
+    background: var(--wl-bg);
+    color: var(--wl-body);
+    font-family: var(--wl-font);
+    font-size: .975rem;
+    line-height: 1.55;
+}
+
+a { color: var(--bs-link-color); }
+a:hover { color: var(--bs-link-hover-color); }
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--wl-ink);
+    font-weight: 750;
+    letter-spacing: -.02em;
+}
+
+::selection { background: var(--wl-primary-light); color: var(--wl-primary-darker); }
+
+/* Slim, unobtrusive scrollbars for a more polished feel */
+* { scrollbar-width: thin; scrollbar-color: #c7d3cd transparent; }
+*::-webkit-scrollbar { height: 10px; width: 10px; }
+*::-webkit-scrollbar-thumb { background: #c7d3cd; border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: #aabdb4; }
+
+/* ---------------------------- Buttons ---------------------------- */
+.btn {
+    border-radius: var(--wl-radius-sm);
+    font-weight: 650;
+    letter-spacing: -.005em;
+    padding: .5rem 1rem;
+    transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .1s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { box-shadow: 0 0 0 3px rgba(22, 116, 96, .22); outline: none; }
+.btn-sm { border-radius: .35rem; font-weight: 600; padding: .32rem .7rem; }
+
+.btn-primary {
+    background: var(--wl-primary);
+    border-color: var(--wl-primary);
+}
+.btn-primary:hover, .btn-primary:focus {
+    background: var(--wl-primary-dark);
+    border-color: var(--wl-primary-dark);
+}
+.btn-primary:disabled { background: #7fa89d; border-color: #7fa89d; }
+
+.btn-outline-primary {
+    border-color: var(--wl-primary);
+    color: var(--wl-primary);
+}
+.btn-outline-primary:hover, .btn-outline-primary:focus {
+    background: var(--wl-primary);
+    border-color: var(--wl-primary);
+}
+
+.btn-outline-secondary {
+    border-color: #cdd7d1;
+    color: #33453d;
+}
+.btn-outline-secondary:hover, .btn-outline-secondary:focus {
+    background: #eef5f1;
+    border-color: #aabdb4;
+    color: #1a3229;
+}
+
+.btn-outline-danger:hover, .btn-outline-danger:focus { box-shadow: none; }
+.btn-success { background: var(--wl-success); border-color: var(--wl-success); }
+.btn-success:hover, .btn-success:focus { background: #166b48; border-color: #166b48; }
+.btn-link { font-weight: 600; text-decoration: none; }
+.btn-link:hover { text-decoration: underline; }
+
+.btn-group .btn { border-radius: 0; }
+.btn-group .btn:first-child { border-top-left-radius: var(--wl-radius-sm); border-bottom-left-radius: var(--wl-radius-sm); }
+.btn-group .btn:last-child { border-top-right-radius: var(--wl-radius-sm); border-bottom-right-radius: var(--wl-radius-sm); }
+
+/* ----------------------------- Cards ------------------------------ */
+.card {
+    border: 1px solid var(--wl-border);
+    border-radius: var(--wl-radius-lg);
+    box-shadow: var(--wl-shadow-sm);
+    transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
+}
+.card:hover { box-shadow: var(--wl-shadow); }
+.card-header {
+    background: var(--wl-primary-soft);
+    border-bottom: 1px solid var(--wl-border);
+    color: var(--wl-ink);
+    font-weight: 700;
+    padding: .9rem 1.25rem;
+}
+.card-body { padding: 1.25rem; }
+.card-footer { background: transparent; border-top: 1px solid var(--wl-border-soft); padding: .9rem 1.25rem; }
+.card.border-danger { border-color: #e6b3ad !important; }
+.card.border-danger .card-body { background: var(--wl-danger-soft); border-radius: 0 0 var(--wl-radius-lg) var(--wl-radius-lg); }
+
+/* ----------------------------- Tables ------------------------------ */
+.table {
+    --bs-table-hover-bg: var(--wl-primary-soft);
+    background: var(--wl-surface);
+    border-radius: var(--wl-radius);
+    color: var(--wl-body);
+    overflow: hidden;
+}
+.table > thead {
+    background: #f2f6f4;
+}
+.table > thead th {
+    border-bottom: 1px solid var(--wl-border);
+    color: #46564f;
+    font-size: .74rem;
+    font-weight: 750;
+    letter-spacing: .06em;
+    padding: .8rem .9rem;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.table > tbody td {
+    border-bottom: 1px solid var(--wl-border-soft);
+    padding: .8rem .9rem;
+    vertical-align: middle;
+}
+.table > tbody tr:last-child td { border-bottom: none; }
+.table-responsive {
+    background: var(--wl-surface);
+    border: 1px solid var(--wl-border);
+    border-radius: var(--wl-radius-lg);
+    box-shadow: var(--wl-shadow-sm);
+}
+.table-responsive .table { border-radius: 0; margin-bottom: 0; }
+
+/* ----------------------------- Badges ------------------------------ */
+.badge {
+    border-radius: 999px;
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+    padding: .38em .7em;
+}
+.text-bg-primary { background-color: var(--wl-primary-light) !important; color: var(--wl-primary-darker) !important; }
+.text-bg-secondary { background-color: #eef1f0 !important; color: #4a5750 !important; }
+.text-bg-success { background-color: #e4f5ec !important; color: #146342 !important; }
+.text-bg-danger { background-color: var(--wl-danger-soft) !important; color: #8f251d !important; }
+.text-bg-info { background-color: var(--wl-info-soft) !important; color: #145478 !important; }
+.text-bg-warning { background-color: var(--wl-warning-soft) !important; color: #8a5c07 !important; }
+.text-bg-light { background-color: #f2f4f3 !important; color: #55625b !important; }
+
+/* ----------------------------- Alerts ------------------------------ */
+.alert {
+    border: 1px solid transparent;
+    border-radius: var(--wl-radius);
+    box-shadow: var(--wl-shadow-sm);
+}
+.alert-success { background: #e9f7f0; border-color: #bfe3d0; color: #135f40; }
+.alert-danger { background: var(--wl-danger-soft); border-color: #eec4bd; color: #8f251d; }
+.alert-warning { background: var(--wl-warning-soft); border-color: #f2dca3; color: #8a5c07; }
+.alert-info { background: var(--wl-info-soft); border-color: #bcdcee; color: #145478; }
+.alert-light { background: #f7f9f8; border-color: var(--wl-border); color: var(--wl-body); }
+.alert-link { font-weight: 700; }
+
+/* ------------------------------ Forms ------------------------------- */
+.form-control, .form-select {
+    border: 1px solid #cfd9d4;
+    border-radius: var(--wl-radius-sm);
+    color: var(--wl-ink);
+    padding: .55rem .75rem;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--wl-primary);
+    box-shadow: 0 0 0 3px rgba(22, 116, 96, .14);
+}
+.form-control::placeholder { color: #8a978f; }
+.form-label { color: #344840; font-weight: 650; margin-bottom: .4rem; }
+.form-text { color: var(--wl-muted); }
+.form-check-input { border-color: #b7c3bd; }
+.form-check-input:checked { background-color: var(--wl-primary); border-color: var(--wl-primary); }
+.form-check-input:focus { box-shadow: 0 0 0 3px rgba(22, 116, 96, .14); }
+.form-switch .form-check-input { height: 1.35rem; width: 2.5rem; }
+
+/* --------------------------- Nav pills ------------------------------ */
+.nav-pills .nav-link {
+    border-radius: 999px;
+    color: #4b5d56;
+    font-weight: 650;
+    padding: .45rem 1rem;
+}
+.nav-pills .nav-link:hover { background: var(--wl-primary-soft); color: var(--wl-primary-darker); }
+.nav-pills .nav-link.active {
+    background: var(--wl-primary);
+    color: #fff;
+}
+
+/* -------------------------- Progress bars ---------------------------- */
+.progress {
+    background-color: #eef2f0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+.progress-bar { background-color: var(--wl-primary); }
+.progress-bar.bg-warning { background-color: #e0a521 !important; }
+.progress-bar.bg-danger { background-color: var(--wl-danger) !important; }
+
+/* ------------------------------ Misc --------------------------------- */
+hr { border-color: var(--wl-border); opacity: 1; }
+.text-muted { color: var(--wl-muted) !important; }
+.border-bottom { border-color: var(--wl-border-soft) !important; }
+
 h1:focus {
     outline: none;
 }

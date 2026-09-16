@@ -18,18 +18,24 @@
         right: 0.75rem;
         top: 0.5rem;
     }
-.app-shell { min-height: 100vh; background: #f6f8fb; color: #1f2937; }
-.app-header { align-items: center; background: #102a43; display: flex; gap: 1.25rem; min-height: 4.5rem; padding: .75rem max(1rem, calc((100vw - 1200px) / 2)); }
-.app-brand { color: #fff; font-size: 1.25rem; font-weight: 700; letter-spacing: -.02em; text-decoration: none; }
-.app-nav { align-items: center; display: flex; flex: 1; flex-wrap: wrap; gap: .15rem; }
-.nav-link, .account-link { border-radius: .375rem; color: #d9e2ec; padding: .45rem .65rem; text-decoration: none; }
-.nav-link:hover, .nav-link:focus, .account-link:hover, .account-link:focus { background: #243b53; color: #fff; }
-.account-link { border: 1px solid #486581; }
-.app-content { margin: 0 auto; max-width: 1200px; padding: 2rem 1rem 3rem; }
+.app-shell { background: #f7faf8; color: #152a23; display: flex; flex-direction: column; min-height: 100vh; }
+.app-header { align-items: center; background: rgba(255, 255, 255, .92); backdrop-filter: saturate(180%) blur(8px); -webkit-backdrop-filter: saturate(180%) blur(8px); border-bottom: 1px solid #dfe6e1; box-shadow: 0 1px 0 rgba(16, 37, 31, .02); display: flex; gap: 2rem; min-height: 4.75rem; padding: .7rem max(2rem, calc((100vw - 1600px) / 2)); position: sticky; top: 0; z-index: 40; }
+.app-brand { align-items: center; color: #11271f; display: flex; font-size: 1.28rem; font-weight: 800; gap: .7rem; letter-spacing: -.03em; text-decoration: none; white-space: nowrap; }
+.brand-mark { align-items: center; background: linear-gradient(155deg, #1a8770, #0f5a49); border-radius: .55rem; box-shadow: 0 .3rem .7rem rgba(15, 90, 73, .28); color: #fff; display: inline-flex; font-size: 1rem; font-weight: 800; height: 2.25rem; justify-content: center; width: 2.25rem; }
+.app-nav { align-items: center; display: flex; flex: 1; flex-wrap: wrap; gap: .3rem; justify-content: flex-end; }
+.nav-link, .user-link { border-radius: .4rem; color: #4b5d56; font-weight: 600; padding: .5rem .65rem; text-decoration: none; transition: background-color .15s ease, color .15s ease; }
+.nav-link:hover, .nav-link:focus, .user-link:hover, .user-link:focus { background: #eef5f1; color: #105f4e; }
+.account-area { align-items: center; border-left: 1px solid #dfe6e1; display: flex; gap: .8rem; padding-left: 1rem; }
+.account-area form { margin: 0; }
+.sign-out-button, .sign-in-link { background: #fff; border: 1px solid #d3ddd7; border-radius: .45rem; color: #274137; cursor: pointer; font: inherit; font-weight: 700; padding: .55rem .9rem; text-decoration: none; transition: background-color .15s ease, border-color .15s ease; }
+.sign-out-button:hover, .sign-out-button:focus, .sign-in-link:hover, .sign-in-link:focus { background: #f0f6f3; border-color: #aabdb4; }
+.app-content { flex: 1; margin: 0 auto; max-width: 1600px; padding: 3rem; width: 100%; box-sizing: border-box; }
+.app-footer { border-top: 1px solid #dfe6e1; color: #687771; display: flex; font-size: .88rem; gap: 1.75rem; padding: 1.25rem max(2rem, calc((100vw - 1600px) / 2)); }
 
 @media (max-width: 720px) {
-    .app-header { align-items: flex-start; flex-wrap: wrap; }
-    .app-nav { order: 3; width: 100%; }
-    .account-link { margin-left: auto; }
-    .app-content { padding-top: 1.25rem; }
+    .app-header { align-items: flex-start; flex-wrap: wrap; gap: .75rem; padding: .8rem 1rem; }
+    .app-nav { justify-content: flex-start; order: 3; width: 100%; }
+    .account-area { margin-left: auto; }
+    .app-content { padding: 2rem 1rem; }
+    .app-footer { flex-direction: column; gap: .35rem; padding: 1.25rem 1rem; }
 }
