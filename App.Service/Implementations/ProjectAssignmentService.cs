@@ -4,6 +4,7 @@ using App.Service.Interfaces;
 using App.Shared;
 using App.Shared.Dtos;
 using App.Shared.Enums;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace App.Service.Implementations;
@@ -11,10 +12,12 @@ namespace App.Service.Implementations;
 public class ProjectAssignmentService : IProjectAssignmentService
 {
     private readonly ApplicationDbContext _db;
+    private readonly UserManager<ApplicationUser> _userManager;
 
-    public ProjectAssignmentService(ApplicationDbContext db)
+    public ProjectAssignmentService(ApplicationDbContext db, UserManager<ApplicationUser> userManager)
     {
         _db = db;
+        _userManager = userManager;
     }
 
     public async Task<List<ProjectAssignmentDto>> GetAssignmentsForProjectAsync(int projectId)
@@ -93,6 +96,7 @@ public class ProjectAssignmentService : IProjectAssignmentService
         }
 
         await _db.SaveChangesAsync();
+        await SynchronizeManagerRoleAsync(employeeId);
 
         return ServiceResult<ProjectAssignmentDto>.Ok(new ProjectAssignmentDto
         {
@@ -114,8 +118,10 @@ public class ProjectAssignmentService : IProjectAssignmentService
 
         // Note: this does not touch any Timesheets already created under this
         // assignment (Timesheet.ProjectId FK uses Restrict, not Cascade) — history is kept.
+        var employeeId = assignment.EmployeeId;
         _db.ProjectAssignments.Remove(assignment);
         await _db.SaveChangesAsync();
+        await SynchronizeManagerRoleAsync(employeeId);
         return ServiceResult.Ok();
     }
 
@@ -168,4 +174,19 @@ public class ProjectAssignmentService : IProjectAssignmentService
         AssignmentType = a.AssignmentType,
         BudgetedHours = a.BudgetedHours
     };
+
+    private async Task SynchronizeManagerRoleAsync(string employeeId)
+    {
+        var employee = await _userManager.FindByIdAsync(employeeId);
+        if (employee is null) return;
+
+        var hasManagerAssignment = await _db.ProjectAssignments.AnyAsync(a =>
+            a.EmployeeId == employeeId && a.AssignmentType == AssignmentType.Manager);
+        var hasManagerRole = await _userManager.IsInRoleAsync(employee, SeedData.ManagerRole);
+
+        if (hasManagerAssignment && !hasManagerRole)
+            await _userManager.AddToRoleAsync(employee, SeedData.ManagerRole);
+        else if (!hasManagerAssignment && hasManagerRole)
+            await _userManager.RemoveFromRoleAsync(employee, SeedData.ManagerRole);
+    }
 }

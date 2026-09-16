@@ -1,5 +1,5 @@
 @page "/manager/timesheet/{TimesheetId:int}"
-@attribute [Authorize(Roles = "Consultant")]
+@attribute [Authorize(Roles = "Manager")]
 @rendermode InteractiveAuto
 @inject IManagerApi Api
 
@@ -222,13 +222,12 @@ else
     private decimal DayTotal(DateOnly day) => EntriesFor(day).Sum(e => e.HoursWorked);
 
     /// <summary>
-    /// Mirrors the service rule: entries can be sent back on a submitted week,
-    /// or on an approved one if something turns up later. An entry that's
-    /// already rejected is waiting on the consultant, not on you.
+    /// Mirrors the service rule: entry-level rejection is only available
+    /// while the timesheet is awaiting review. Approval is final.
     /// </summary>
     private bool CanRejectEntry(TimesheetEntryDto entry) =>
         _timesheet is not null
-        && _timesheet.Status is TimesheetStatus.Submitted or TimesheetStatus.Approved
+        && _timesheet.Status == TimesheetStatus.Submitted
         && entry.Status != EntryStatus.Rejected;
 
     private void ToggleWeekReject()

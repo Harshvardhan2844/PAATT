@@ -6,28 +6,9 @@
             <span class="brand-mark" aria-hidden="true">W</span>
             <span>WorkLedger</span>
         </a>
-        <nav class="app-nav" aria-label="Primary navigation">
-            <AuthorizeView Roles="Admin">
-                <Authorized>
-                    <a class="nav-link" href="/">Overview</a>
-                    <a class="nav-link" href="/admin/clients">Clients</a>
-                    <a class="nav-link" href="/admin/projects">Projects</a>
-                    <a class="nav-link" href="/admin/assignments">Assignments</a>
-                    <a class="nav-link" href="/admin/employees">People</a>
-                </Authorized>
-            </AuthorizeView>
-            <AuthorizeView Roles="Consultant">
-                <Authorized>
-                    <a class="nav-link" href="/consultant/projects">My projects</a>
-                    <a class="nav-link" href="/consultant/timesheets">My timesheets</a>
-                    <ManagerNavigation />
-                </Authorized>
-            </AuthorizeView>
-        </nav>
         <AuthorizeView>
             <Authorized>
                 <div class="account-area">
-                    <a class="user-link" href="/Account/Manage">Account</a>
                     <form action="/Account/Logout" method="post">
                         <AntiforgeryToken />
                         <input type="hidden" name="ReturnUrl" value="/Account/Login" />
@@ -40,9 +21,14 @@
             </NotAuthorized>
         </AuthorizeView>
     </header>
-    <main class="app-content">
-        @Body
-    </main>
+    <div class="workspace-layout">
+        <aside class="app-sidebar" aria-label="Dashboard navigation">
+            <RoleNavigation />
+        </aside>
+        <main class="app-content">
+            @Body
+        </main>
+    </div>
     <footer class="app-footer">
         <span>© @DateTime.UtcNow.Year WorkLedger</span>
         <span>Project allocation &amp; time tracking</span>

@@ -24,7 +24,7 @@ public static class ManagerEndpoints
     {
         var group = endpoints
             .MapGroup("/api/manager")
-            .RequireAuthorization(policy => policy.RequireRole(SeedData.ConsultantRole));
+            .RequireAuthorization(policy => policy.RequireRole(SeedData.ManagerRole));
 
         group.MapGet("/projects", async (IManagerApi api) =>
             Results.Ok(await api.GetMyProjectsAsync()));

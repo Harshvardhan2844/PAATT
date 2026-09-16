@@ -1,4 +1,6 @@
 using App.Data.Entities;
+using App.Shared.Enums;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +29,7 @@ namespace App.Data;
 public static class SeedData
 {
     public const string AdminRole = "Admin";
+    public const string ManagerRole = "Manager";
     public const string ConsultantRole = "Consultant";
 
     private const string DefaultAdminEmail = "admin@timetracker.local";
@@ -41,7 +44,13 @@ public static class SeedData
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(SeedData));
 
         await EnsureRoleAsync(roleManager, AdminRole);
+        await EnsureRoleAsync(roleManager, ManagerRole);
         await EnsureRoleAsync(roleManager, ConsultantRole);
+
+        // Manager is derived from project assignments. Keep the Identity claim
+        // in sync at startup so existing assignments are represented in the
+        // navigation and authorization rules after the next sign-in.
+        await SynchronizeManagerRolesAsync(services, userManager);
 
         var adminEmail = config["Seed:AdminEmail"] ?? DefaultAdminEmail;
         var adminPassword = config["Seed:AdminPassword"] ?? DefaultAdminPassword;
@@ -82,5 +91,30 @@ public static class SeedData
         {
             await roleManager.CreateAsync(new IdentityRole(roleName));
         }
+    }
+
+    private static async Task SynchronizeManagerRolesAsync(
+        IServiceProvider services, UserManager<ApplicationUser> userManager)
+    {
+        var db = services.GetRequiredService<ApplicationDbContext>();
+        var managerIds = await db.ProjectAssignments
+            .Where(a => a.AssignmentType == AssignmentType.Manager)
+            .Select(a => a.EmployeeId)
+            .Distinct()
+            .ToListAsync();
+
+        var managers = await userManager.GetUsersInRoleAsync(ManagerRole);
+        var managerRoleIds = managers.Select(u => u.Id).ToHashSet();
+
+        foreach (var userId in managerIds.Where(id => !managerRoleIds.Contains(id)))
+        {
+            var user = await userManager.FindByIdAsync(userId);
+            if (user is not null)
+                await userManager.AddToRoleAsync(user, ManagerRole);
+        }
+
+        var assignedManagerIds = managerIds.ToHashSet();
+        foreach (var user in managers.Where(u => !assignedManagerIds.Contains(u.Id)))
+            await userManager.RemoveFromRoleAsync(user, ManagerRole);
     }
 }

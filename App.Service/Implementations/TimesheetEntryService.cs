@@ -143,10 +143,9 @@ public class TimesheetEntryService : ITimesheetEntryService
         if (!managesProject)
             return ServiceResult.Fail("You don't manage this project.");
 
-        // Nothing to reject on a week that hasn't been submitted. Approved is
-        // allowed: spotting a bad entry after signing off the week is exactly
-        // the case entry-level rejection exists for.
-        if (entry.Timesheet.Status is not (TimesheetStatus.Submitted or TimesheetStatus.Approved))
+        // A final approval closes the whole timesheet. Entry-level decisions
+        // are only possible while the week is awaiting the manager's review.
+        if (entry.Timesheet.Status != TimesheetStatus.Submitted)
             return ServiceResult.Fail($"Entries can't be rejected on a {entry.Timesheet.Status.ToString().ToLowerInvariant()} timesheet.");
 
         if (entry.Status == EntryStatus.Rejected)
