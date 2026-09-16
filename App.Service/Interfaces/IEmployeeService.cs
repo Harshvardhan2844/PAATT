@@ -28,7 +28,7 @@ public interface IEmployeeService
     Task<List<EmployeeDto>> GetConsultantsAsync();
 
     /// <summary>Everyone currently holding the additional Admin role, sorted by name.</summary>
-    Task<List<EmployeeDto>> GetAdminsAsync();
+    //Task<List<EmployeeDto>> GetAdminsAsync();
 
     /// <summary>Creates a new user (Admin action). Always gets the Consultant role; never Admin at creation. Fails if the email is already taken.</summary>
     Task<ServiceResult<EmployeeDto>> CreateEmployeeAsync(string name, string email, string password);

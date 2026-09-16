@@ -62,13 +62,13 @@ public class EmployeeService : IEmployeeService
                    .ToList();
     }
 
-    public async Task<List<EmployeeDto>> GetAdminsAsync()
-    {
-        var all = await GetAllAsync();
-        return all.Where(e => e.IsAdmin)
-                   .OrderBy(e => e.Name)
-                   .ToList();
-    }
+    //public async Task<List<EmployeeDto>> GetAdminsAsync()
+    //{
+    //    var all = await GetAllAsync();
+    //    return all.Where(e => e.IsAdmin)
+    //               .OrderBy(e => e.Name)
+    //               .ToList();
+    //}
 
     public async Task<ServiceResult<EmployeeDto>> CreateEmployeeAsync(string name, string email, string password)
     {
